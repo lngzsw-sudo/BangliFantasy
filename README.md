@@ -16,14 +16,18 @@ npm start          # http://localhost:3000
 npm test           # server + shared logic tests (node:test)
 ```
 
-Open the URL in two browser windows (or on a phone on the same network), pick a
-name, and you are in. You don't need an account: each name is tied to a random
-token stored in that browser.
+Open the URL in two browser windows (or on a phone on the same network),
+register a character name with a password, and you are in. Log in with the
+same name and password from any device.
 
-| Env var     | Default              | Purpose                        |
-|-------------|----------------------|--------------------------------|
-| `PORT`      | `3000`               | HTTP + WebSocket port          |
-| `DATA_FILE` | `data/players.json`  | Where player profiles are saved |
+| Env var        | Default             | Purpose |
+|----------------|---------------------|---------|
+| `PORT`         | `3000`              | HTTP + WebSocket port |
+| `DATABASE_URL` | (unset)             | Postgres connection string. When set, accounts are stored in Postgres. |
+| `DATA_FILE`    | `data/players.json` | JSON file used when `DATABASE_URL` is unset (local play) |
+
+To run the Postgres tests locally, point `TEST_DATABASE_URL` at an empty
+database. CI always runs them against a Postgres service.
 
 ## Deploy (for play-testing)
 
@@ -36,10 +40,15 @@ Pages won't work. [Render](https://render.com)'s free plan works, and
    and creates the `bangli-fantasy` web service.
 3. When the deploy finishes, open the `https://bangli-fantasy-….onrender.com` URL.
 
-Free-plan caveats: the service sleeps after about 15 minutes without traffic,
-so the first visit afterwards takes 30–60 s to wake it up. The disk is also
-wiped on every restart or redeploy, so saved characters (`data/players.json`)
-are lost. That's fine for testing; add a real database before a public launch.
+Free-plan caveat: the service sleeps after about 15 minutes without traffic,
+so the first visit afterwards takes 30–60 s to wake it up.
+
+**Keep accounts across redeploys.** Render's disk is wiped on every restart,
+so without a database every character is lost. Create a free Postgres
+database (for example on [Neon](https://neon.tech) or
+[Supabase](https://supabase.com)), copy its connection string, and add it to
+the Render service as the environment variable `DATABASE_URL`. The server
+creates its `players` table on first start.
 
 ## How to play
 
@@ -69,7 +78,7 @@ splash damage, the spatula adds +25% crit chance, and the umbrella has a 30%
 chance to block a hit.
 
 Not built yet (post-MVP): rooms 03–05, the bounty board, more monsters and
-bosses, parties, hat/prop/pet slots, the 1v1 board games, and a real database.
+bosses, parties, hat/prop/pet slots, and the 1v1 board games.
 
 ## Architecture
 
@@ -93,7 +102,8 @@ server/
   room.js          authoritative room simulation (tick 10 Hz)
   combat.js        damage roll, EXP/level-up
   minigame.js      server-authoritative memory match
-  store.js         player persistence (JSON file, swappable)
+  auth.js          password hashing, login rate limiting
+  store.js         player persistence (Postgres or JSON file)
 test/              node:test suites
 ```
 
@@ -110,10 +120,13 @@ step, and is easy to test in-process: the tests drive a `World` with a fake
 clock and a seeded RNG, with no sockets. The room/message design follows
 Colyseus closely, so switching later would be mostly mechanical.
 
-**Persistence.** `store.js` saves profiles (level, EXP, coins, inventory,
-equipment) to a JSON file with debounced, atomic writes. It saves on
-disconnect and every 30 s. Its API is `get`/`put`/`flush`, so it can be swapped
-for SQLite, Postgres or Supabase without touching game code.
+**Accounts and persistence.** Players register a name and password. Passwords
+are hashed with scrypt, and repeated wrong passwords lock the name for five
+minutes. `store.js` has one async interface (`get`/`create`/`save`) with two
+implementations: `PgStore`, which keeps each account as a row with the
+profile in a JSONB column, and `JsonStore` for local play. Profiles save on
+disconnect and every 30 s, and writes for the same account are queued so they
+land in order.
 
 **Art.** There are no image files. Characters, rats, drops and weapons are
 ASCII pixel art in `client/src/art.js`. Tiles are drawn in code. Each look and
@@ -121,7 +134,7 @@ outfit combination is turned into a texture the first time it's needed.
 
 ### Protocol (JSON over WebSocket)
 
-Client → server: `hello {name, token}`, `move {x,y}`, `attack {id}`, `chat {text}`,
+Client → server: `hello {name, password, mode: login|register}`, `move {x,y}`, `attack {id}`, `chat {text}`,
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `mg_open`, `mg_flip {i}`, `mg_close`, `ping`.
 

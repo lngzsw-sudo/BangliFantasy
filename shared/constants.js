@@ -9,6 +9,8 @@ export const PLAYER_SPEED = 4; // tiles per second
 export const CHAT_MAX = 80;
 export const CHAT_COOLDOWN_MS = 600;
 export const NAME_RE = /^[\p{L}\p{M}\p{N}_]{2,16}$/u;
+export const PASSWORD_MIN = 6;
+export const PASSWORD_MAX = 72;
 
 export const RESPAWN_ROOM = 'market';
 export const DEATH_RESPAWN_MS = 3000;
