@@ -25,6 +25,22 @@ token stored in that browser.
 | `PORT`      | `3000`               | HTTP + WebSocket port          |
 | `DATA_FILE` | `data/players.json`  | Where player profiles are saved |
 
+## Deploy (for play-testing)
+
+The game needs a Node.js server with WebSockets, so static hosts like GitHub
+Pages won't work. [Render](https://render.com)'s free plan works, and
+`render.yaml` is included:
+
+1. Sign in to Render with GitHub, then choose **New → Blueprint**.
+2. Pick this repository and the branch to deploy. Render reads `render.yaml`
+   and creates the `bangli-fantasy` web service.
+3. When the deploy finishes, open the `https://bangli-fantasy-….onrender.com` URL.
+
+Free-plan caveats: the service sleeps after about 15 minutes without traffic,
+so the first visit afterwards takes 30–60 s to wake it up. The disk is also
+wiped on every restart or redeploy, so saved characters (`data/players.json`)
+are lost. That's fine for testing; add a real database before a public launch.
+
 ## How to play
 
 - **Tap/click the ground** to walk (server-side A* pathfinding).
