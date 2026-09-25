@@ -1,0 +1,13 @@
+# Render Blueprint: one free web service running the game server.
+# Render injects PORT; the server reads it. WebSockets work out of the box.
+services:
+  - type: web
+    name: bangli-fantasy
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

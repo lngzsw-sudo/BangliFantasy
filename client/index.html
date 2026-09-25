@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1f1a24">
+  <title>Bang Li Fantasy · บางลี่แลนด์</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧋</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="game"></div>
+
+  <!-- Login -->
+  <div id="login">
+    <form id="login-form" autocomplete="off">
+      <h1><span>บางลี่แลนด์</span><small>Bang Li Fantasy</small></h1>
+      <p class="tag">ตลาดสด · ตีหนูท่อ · แต่งตัวเท่ · แชตกับเพื่อน</p>
+      <input id="login-name" maxlength="16" placeholder="ตั้งชื่อตัวละคร" aria-label="ชื่อตัวละคร" required>
+      <button type="submit">เข้าตลาด 🛵</button>
+      <p id="login-error" role="alert"></p>
+      <p class="hint">ไม่ต้องสมัคร — ชื่อจะผูกกับเบราว์เซอร์นี้อัตโนมัติ</p>
+    </form>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div id="me-card">
+      <div class="who">Lv.<b id="me-lvl">1</b> <span id="me-name"></span></div>
+      <div class="bar hp"><div id="hp-fill"></div><span id="hp-text"></span></div>
+      <div class="bar exp"><div id="exp-fill"></div><span id="exp-text"></span></div>
+      <div class="wallet">🪙 <b id="coins">0</b> <span class="sep">·</span> 🥫 <b id="junk">0</b></div>
+    </div>
+
+    <div id="room-banner"><b id="room-name"></b><small id="room-sub"></small></div>
+    <div id="room-toast"></div>
+
+    <div id="actions">
+      <button id="btn-auto" title="Auto-farm"><span>🤖</span><span class="label">AUTO</span></button>
+      <button id="btn-potion" title="ดื่มโอเลี้ยง (ปุ่ม 1)"><span>🧋</span><span class="label">×<b id="potions">0</b></span></button>
+      <button id="btn-bag" title="กระเป๋า"><span>🎒</span><span class="label">กระเป๋า</span></button>
+      <button id="btn-emote" title="ท่าทาง"><span>😄</span><span class="label">ท่าทาง</span></button>
+      <button id="btn-game" title="มินิเกม"><span>🎴</span><span class="label">มินิเกม</span></button>
+      <div id="emotes"></div>
+    </div>
+
+    <div id="chat">
+      <div id="chat-log" aria-live="polite"></div>
+      <form id="chat-form">
+        <input id="chat-input" maxlength="80" placeholder="พิมพ์แชต… (Enter)" enterkeyhint="send" autocomplete="off">
+        <button type="submit" aria-label="ส่ง">➤</button>
+      </form>
+    </div>
+
+    <div id="toasts"></div>
+
+    <div id="panel" hidden>
+      <header><h2 id="panel-title"></h2><button id="panel-close" aria-label="ปิด">✕</button></header>
+      <div id="panel-body"></div>
+    </div>
+  </div>
+
+  <!-- Close-up minigame overlay -->
+  <div id="closeup" hidden>
+    <div class="closeup-inner">
+      <header>
+        <h2>☕ โต๊ะหน้าร้านกาแฟ · การ์ดจับคู่</h2>
+        <button id="mg-close" aria-label="ปิด">✕</button>
+      </header>
+      <div class="table">
+        <div class="cup">☕</div>
+        <div id="mg-grid"></div>
+        <div class="saucer">🧋</div>
+      </div>
+      <footer>
+        <span>จำนวนครั้ง: <b id="mg-moves">0</b></span>
+        <span id="mg-status"></span>
+      </footer>
+      <div id="mg-result" hidden>
+        <p>จับคู่ครบ! ได้ 🪙 <b id="mg-reward">0</b></p>
+        <button id="mg-again">เล่นอีกตา</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="disconnected" hidden>
+    <div><p>หลุดการเชื่อมต่อจากตลาด 😵</p><button id="reconnect">เข้าใหม่</button></div>
+  </div>
+
+  <script src="/vendor/phaser.js"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
