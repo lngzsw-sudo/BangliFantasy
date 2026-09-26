@@ -54,11 +54,15 @@ export const MISS_CHANCE = 0.05;
 export const ITEMS = {
   junk: { name: 'เศษขยะ', icon: '🥫', desc: 'วัตถุดิบคราฟต์ชุดแฟชั่น' },
   oliang: { name: 'โอเลี้ยง', icon: '🧋', desc: 'ฟื้น HP 45', heal: 45, use: true },
+  chayen: { name: 'ชาเย็น', icon: '🥤', desc: 'ฟื้น HP 150 — สำหรับริมคลอง', heal: 150, use: true },
   broom: { name: WEAPONS.broom.name, icon: '🧹', desc: WEAPONS.broom.desc, slot: 'weapon' },
   spatula: { name: WEAPONS.spatula.name, icon: '🍳', desc: WEAPONS.spatula.desc, slot: 'weapon' },
   umbrella: { name: WEAPONS.umbrella.name, icon: '⛱️', desc: WEAPONS.umbrella.desc, slot: 'weapon' },
   feather: { name: 'ขนนกพิราบ', icon: '🪶', desc: 'ดรอปจากนกพิราบ — วัตถุดิบหมวก' },
   bone: { name: 'กระดูกแทะเล่น', icon: '🦴', desc: 'ดรอปจากหมาจร — วัตถุดิบหมวก' },
+  hyacinth: { name: 'ก้านผักตบชวา', icon: '🌿', desc: 'ดรอปจากผักตบชวากลายพันธุ์ — เอาไปสานของ' },
+  scale: { name: 'เกล็ดตัวเงินตัวทอง', icon: '🦎', desc: 'ดรอปจากตัวเงินตัวทอง — ว่ากันว่าเรียกทรัพย์' },
+  flood_badge: { name: 'เหรียญกู้ภัยน้ำท่วม', icon: '🏅', desc: 'ได้จากการปราบมวลน้ำท่วม' },
   vest_win: {
     name: 'เสื้อกั๊กวินมอเตอร์ไซค์', icon: '🦺',
     desc: 'ชุดแฟชั่น: เสื้อกั๊กส้มเบอร์ 69 ใส่แล้วดูมีคิว', slot: 'body',
@@ -67,6 +71,14 @@ export const ITEMS = {
     name: 'หมวกสานเสียบขนนก', icon: '👒',
     desc: 'หมวกแฟชั่น: หมวกสานแม่ค้า เสียบขนนกพิราบเท่ๆ', slot: 'head',
   },
+  hat_hyacinth: {
+    name: 'หมวกสานผักตบชวา', icon: '🧺',
+    desc: 'หมวกแฟชั่น: งานจักสานผักตบชวาฝีมือชุมชนริมคลอง', slot: 'head',
+  },
+  raincoat: {
+    name: 'ชุดกันฝนกู้ภัยน้ำท่วม', icon: '🧥',
+    desc: 'ชุดแฟชั่น: เสื้อกันฝนเหลืองสะท้อนแสง สำหรับผู้พิชิตมวลน้ำท่วม', slot: 'body',
+  },
 };
 
 // Equipment slots that change how a character looks.
@@ -74,7 +86,7 @@ export const FASHION_SLOTS = ['body', 'head'];
 
 // NPC shops: what each NPC sells for coins.
 export const SHOPS = {
-  cafe: { oliang: 10 },
+  cafe: { oliang: 10, chayen: 35 },
   grocery: { spatula: 120, umbrella: 100, broom: 30 },
 };
 
@@ -82,6 +94,8 @@ export const SHOPS = {
 export const RECIPES = {
   vest_win: { coins: 50, items: { junk: 5 } },
   hat_straw: { coins: 80, items: { feather: 6, bone: 2 } },
+  hat_hyacinth: { coins: 150, items: { hyacinth: 12 } },
+  raincoat: { coins: 300, items: { flood_badge: 1, scale: 4, hyacinth: 5 } },
 };
 
 export const MONSTERS = {
@@ -125,37 +139,109 @@ export const MONSTERS = {
     leash: 8,
     aggroRange: 2.5,
   },
+
+  // --- ชุมชนริมคลองสองพี่น้อง (Room 03) ---
+  // Floats in the shallows and grabs whoever wades too close: hits slow you.
+  hyacinth: {
+    name: 'ผักตบชวากลายพันธุ์',
+    level: 13,
+    hp: 160, atk: 16, def: 4, aspd: 0.7, range: 1.4,
+    speed: 0.8, exp: 45,
+    coins: [8, 16],
+    drops: [
+      { item: 'hyacinth', chance: 0.6, amount: [1, 2] },
+      { item: 'junk', chance: 0.3, amount: [1, 2] },
+    ],
+    respawnMs: 6000,
+    wanderRadius: 2,
+    leash: 6,
+    aggroRange: 1.5,
+    habitat: 's',
+    onHit: { slow: { ms: 3000, factor: 0.5 } },
+  },
+  // Shy until hit; its bite is poisonous. Drops extra coins (it's the "money-gold" lizard).
+  monitor: {
+    name: 'ตัวเงินตัวทอง',
+    level: 17,
+    hp: 240, atk: 22, def: 6, aspd: 0.9, range: 1.4,
+    speed: 3.0, exp: 75,
+    coins: [20, 45],
+    drops: [{ item: 'scale', chance: 0.4, amount: [1, 1] }],
+    respawnMs: 7000,
+    wanderRadius: 4,
+    leash: 9,
+    habitat: ',',
+    onHit: { poison: { ms: 5000, dmg: 4 } },
+  },
+  // Miniboss: telegraphs a flood wave that hits everyone nearby unless they step
+  // away. Loot and EXP go to everyone who did at least 10% of its HP.
+  flood: {
+    name: 'มวลน้ำท่วม',
+    boss: true,
+    level: 24,
+    hp: 900, atk: 20, def: 6, aspd: 0.6, range: 1.8,
+    speed: 1.2, exp: 400,
+    coins: [80, 150],
+    drops: [
+      { item: 'flood_badge', chance: 1, amount: [1, 1] },
+      { item: 'hyacinth', chance: 1, amount: [3, 5] },
+    ],
+    respawnMs: 120000,
+    wanderRadius: 2,
+    leash: 6,
+    aggroRange: 3,
+    habitat: 's',
+    shareLoot: 0.1,
+    wave: { every: 7000, windup: 1200, radius: 3, dmg: 25 },
+  },
 };
 
 // The auto-farm bot won't start fights with monsters this many levels above you.
 export const BOT_LEVEL_MARGIN = 2;
 
-// Daily Bounty Board (GDD §2 Room 01). Everyone sees the same few bounties
-// each day, picked from this pool by date; progress resets at midnight (Bangkok).
+// Daily Bounty Board (GDD §2 Room 01). Everyone sees the same bounties each
+// day, picked from this pool by date; progress resets at midnight (Bangkok).
 export const BOUNTY_POOL = [
-  { id: 'rat10', type: 'rat', need: 10, coins: 40, exp: 30 },
-  { id: 'rat25', type: 'rat', need: 25, coins: 90, exp: 70 },
-  { id: 'pigeon8', type: 'pigeon', need: 8, coins: 45, exp: 35 },
-  { id: 'pigeon20', type: 'pigeon', need: 20, coins: 100, exp: 80 },
-  { id: 'dog3', type: 'dog', need: 3, coins: 70, exp: 60 },
-  { id: 'dog8', type: 'dog', need: 8, coins: 160, exp: 140 },
+  { id: 'rat10', zone: 'alley', type: 'rat', need: 10, coins: 40, exp: 30 },
+  { id: 'rat25', zone: 'alley', type: 'rat', need: 25, coins: 90, exp: 70 },
+  { id: 'pigeon8', zone: 'alley', type: 'pigeon', need: 8, coins: 45, exp: 35 },
+  { id: 'pigeon20', zone: 'alley', type: 'pigeon', need: 20, coins: 100, exp: 80 },
+  { id: 'dog3', zone: 'alley', type: 'dog', need: 3, coins: 70, exp: 60 },
+  { id: 'dog8', zone: 'alley', type: 'dog', need: 8, coins: 160, exp: 140 },
+  { id: 'hyacinth10', zone: 'canal', type: 'hyacinth', need: 10, coins: 150, exp: 300 },
+  { id: 'hyacinth25', zone: 'canal', type: 'hyacinth', need: 25, coins: 350, exp: 700 },
+  { id: 'monitor5', zone: 'canal', type: 'monitor', need: 5, coins: 200, exp: 350 },
+  { id: 'monitor12', zone: 'canal', type: 'monitor', need: 12, coins: 450, exp: 800 },
+  { id: 'flood1', zone: 'canal', type: 'flood', need: 1, coins: 300, exp: 600 },
 ];
-export const BOUNTIES_PER_DAY = 3;
+// How many bounties each zone gets per day (each for a different monster).
+export const BOUNTY_SLOTS = { alley: 2, canal: 2 };
 const BANGKOK_OFFSET_MS = 7 * 3600 * 1000;
 
 export function bountyDay(now) {
   return new Date(now + BANGKOK_OFFSET_MS).toISOString().slice(0, 10);
 }
 
-// Deterministic pick for a day: one bounty per monster type.
+// Deterministic pick for a day: per zone, a few monster types, one bounty each.
 export function bountiesFor(day) {
   let h = 2166136261;
   for (const ch of day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
   const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) / 4294967296);
-  const byType = new Map();
-  for (const b of BOUNTY_POOL) byType.set(b.type, [...(byType.get(b.type) ?? []), b]);
-  const picks = [...byType.values()].map((list) => list[Math.floor(rnd() * list.length)]);
-  return picks.slice(0, BOUNTIES_PER_DAY);
+  const picks = [];
+  for (const [zone, slots] of Object.entries(BOUNTY_SLOTS)) {
+    const byType = new Map();
+    for (const b of BOUNTY_POOL) if (b.zone === zone) byType.set(b.type, [...(byType.get(b.type) ?? []), b]);
+    const types = [...byType.keys()];
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(rnd() * (i + 1));
+      [types[i], types[j]] = [types[j], types[i]];
+    }
+    for (const type of types.slice(0, slots)) {
+      const list = byType.get(type);
+      picks.push(list[Math.floor(rnd() * list.length)]);
+    }
+  }
+  return picks;
 }
 
 export const MINIGAME = {

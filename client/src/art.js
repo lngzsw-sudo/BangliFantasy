@@ -83,6 +83,34 @@ BODY_OVERLAYS.hat_straw = {
   ],
 };
 
+BODY_OVERLAYS.hat_hyacinth = {
+  followsHead: true,
+  palette: { g: '#7a9a4a', G: '#556b30', v: '#9b6bd6' },
+  rows: [
+    '....kkkkkkkk.v..',
+    '...kgGgGgGgGkv..',
+    '..kGgGgGgGgGgk..',
+    '.kkkkkkkkkkkkkk.',
+    ...Array(12).fill('................'),
+  ],
+};
+
+// Yellow flood-rescue raincoat with a reflective band and hood.
+BODY_OVERLAYS.raincoat = {
+  palette: { y: '#ffd23f', Y: '#c99a1a', r: '#f4f1c0' },
+  rows: [
+    ...Array(8).fill('................'),
+    '....kyyyyyyk....',
+    '....kyyyyyyk....',
+    '...kyyyyyyyyk...',
+    '..kyrrrrrrrryk..',
+    '..kYYYYYYYYYYk..',
+    '....kYYYYYYk....',
+    '................',
+    '................',
+  ],
+};
+
 // Held weapons (drawn at the character's right hand).
 export const WEAPON_ART = {
   broom: {
@@ -234,11 +262,116 @@ export const DOG_FRAMES = [
   ],
 ];
 
-// Every monster type's sprite frames, palette and head height (pixels above feet).
+// ผักตบชวากลายพันธุ์: floating clump with a purple flower and angry eyes.
+export const HYACINTH_PALETTE = { g: '#3f8a36', G: '#6fbf4a', v: '#9b6bd6', V: '#d9c2ff', w: '#5b93b3', e: '#ffe066' };
+export const HYACINTH_FRAMES = [
+  [
+    ...Array(3).fill('................'),
+    '.......kk.......',
+    '......kvVk......',
+    '.....kvVvVk.....',
+    '......kvvk......',
+    '...kk..kk..kk...',
+    '..kGGk.kk.kGGk..',
+    '..kGgGkggkGgGk..',
+    '...kgGgggggGgk..',
+    '..kggekggkegggk.',
+    '..kgggggggggggk.',
+    '.wkkggggggggkkw.',
+    'wwwwkkkkkkkkwwww',
+    '.ww..wwww..ww...',
+  ],
+  [
+    ...Array(4).fill('................'),
+    '.......kk.......',
+    '......kvVk......',
+    '.....kvVvVk.....',
+    '...kk.kvvk.kk...',
+    '..kGGk.kk.kGGk..',
+    '..kGgGkggkGgGk..',
+    '...kgGgggggGgk..',
+    '..kggekggkegggk.',
+    '..kgggggggggggk.',
+    'wwkkggggggggkkww',
+    '.wwwkkkkkkkkwww.',
+    'ww..wwwwww..ww..',
+  ],
+];
+
+// ตัวเงินตัวทอง: long dark monitor lizard with yellow spots, facing right.
+export const MONITOR_PALETTE = { d: '#3b3a2e', D: '#5a5840', y: '#e3c16f', e: '#ffcf3f', t: '#e86a7a' };
+export const MONITOR_FRAMES = [
+  [
+    ...Array(8).fill('................'),
+    '..........kkkk..',
+    '.........kDDDekk',
+    'kk....kkkDdDDDDk',
+    'kDkkkkDyDDyDDkkt',
+    '.kDDyDDDDDDyDk..',
+    '..kkkDkkkkDkk...',
+    '....kDk...kDk...',
+    '....kk.....kk...',
+  ],
+  [
+    ...Array(8).fill('................'),
+    '..........kkkk..',
+    '.........kDDDekk',
+    '......kkkDdDDDDk',
+    'kkkkkkDyDDyDDkk.',
+    'kDDDyDDDDDDyDk..',
+    '.kkkkDkkkkDkk...',
+    '...kDk.....kDk..',
+    '...kk.......kk..',
+  ],
+];
+
+// มวลน้ำท่วม: a muddy wave with furious eyes. Drawn at double size.
+export const FLOOD_PALETTE = { b: '#6b5a3a', B: '#8a7450', w: '#5b93b3', W: '#9cc8e0', f: '#e8f4ff', e: '#ff4455' };
+export const FLOOD_FRAMES = [
+  [
+    ...Array(3).fill('................'),
+    '.........kkkk...',
+    '.......kkWWffk..',
+    '.....kkwWWWWfk..',
+    '....kwwwkkwwWk..',
+    '...kwwbekbwekwk.',
+    '..kwwbbbbbbbbwk.',
+    '..kwbBBbbbbBbbwk',
+    '.kwbbbbBBbbbbbwk',
+    '.kwbbkkkkkkbbbwk',
+    'kwwbbbbbbbbbbwwk',
+    'kWwwbbbbbbbwwwWk',
+    'fWWwwwwwwwwwwWWf',
+    '.ffWWffWWffWWff.',
+  ],
+  [
+    ...Array(2).fill('................'),
+    '..........kkkk..',
+    '........kkWWffk.',
+    '......kkwWWWWfk.',
+    '.....kwwwkkwwWk.',
+    '....kwwbekbwekwk',
+    '...kwwbbbbbbbbwk',
+    '..kwwbBBbbbbBbbk',
+    '..kwbbbbBBbbbbwk',
+    '.kwwbbkkkkkkbbwk',
+    'kwwbbbbbbbbbbwwk',
+    'kWwwbbbbbbbwwwWk',
+    'fWWwwwwwwwwwwWWf',
+    'ffWWffWWffWWffWf',
+    '.f..f..f..f..f..',
+  ],
+];
+
+// Every monster type's sprite frames, palette, head height (pixels above feet)
+// and optional display scale.
 export const MONSTER_ART = {
   rat: { frames: RAT_FRAMES, palette: RAT_PALETTE, headY: 11 },
   pigeon: { frames: PIGEON_FRAMES, palette: PIGEON_PALETTE, headY: 9 },
   dog: { frames: DOG_FRAMES, palette: DOG_PALETTE, headY: 12 },
+  hyacinth: { frames: HYACINTH_FRAMES, palette: HYACINTH_PALETTE, headY: 13 },
+  monitor: { frames: MONITOR_FRAMES, palette: MONITOR_PALETTE, headY: 8 },
+  flood: { frames: FLOOD_FRAMES, palette: FLOOD_PALETTE, headY: 13, scale: 2 },
 };
 
 export const DROP_ART = {
@@ -279,6 +412,45 @@ export const DROP_ART = {
       'kwwwwwwk',
       'kwwkkwwk',
       '.kk..kk.',
+    ],
+  },
+  hyacinth: {
+    palette: { g: '#3f8a36', G: '#6fbf4a', v: '#9b6bd6' },
+    rows: [
+      '...kvk..',
+      '..kvvk..',
+      '...kGk..',
+      '..kGgk..',
+      '.kGgk...',
+      '.kgGk...',
+      'kgGk....',
+      'kkk.....',
+    ],
+  },
+  scale: {
+    palette: { d: '#5a5840', y: '#e3c16f', Y: '#fff0a0' },
+    rows: [
+      '..kkkk..',
+      '.kyYyyk.',
+      'kyYdyyyk',
+      'kyddyydk',
+      'kyyyddyk',
+      '.kyyyyk.',
+      '..kyyk..',
+      '...kk...',
+    ],
+  },
+  flood_badge: {
+    palette: { y: '#ffd23f', Y: '#c99a1a', r: '#d94f4f', b: '#3b82c4' },
+    rows: [
+      '.rrbbrr.',
+      '..rbbr..',
+      '..kkkk..',
+      '.kyyyyk.',
+      'kyyYYyyk',
+      'kyYyyYyk',
+      '.kyyyyk.',
+      '..kkkk..',
     ],
   },
   junk: {

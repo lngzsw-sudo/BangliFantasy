@@ -14,6 +14,9 @@ export const TILES = {
   ',': { name: 'grass' },
   '=': { name: 'concrete' },
   'P': { name: 'portal' },
+  'W': { name: 'boardwalk' }, // สะพานไม้
+  's': { name: 'shallows' }, // น้ำตื้น เดินลุยได้
+  'H': { name: 'stilt house', block: true }, // บ้านริมน้ำ
 };
 
 export const ROOMS = {
@@ -67,7 +70,7 @@ export const ROOMS = {
       '########################################',
       '##########========######=========#######',
       '##########==B=====######===K=====#######',
-      '######============######=========###===#',
+      '######============######=========###===P',
       '######==BB========================B===##',
       '#=====================K==============###',
       'P==========B=======================BB=##',
@@ -80,6 +83,7 @@ export const ROOMS = {
     ],
     portals: [
       { x: 0, y: 6, w: 1, h: 2, to: 'market', tx: 30, ty: 8, label: '← ลานกลางตลาด' },
+      { x: 39, y: 3, w: 1, h: 1, to: 'canal', tx: 1, ty: 5, label: 'ริมคลอง (Lv 13+) →' },
     ],
     npcs: [],
     objects: [],
@@ -88,6 +92,43 @@ export const ROOMS = {
       { type: 'rat', count: 7, area: { x1: 5, y1: 3, x2: 18, y2: 11 } },
       { type: 'pigeon', count: 7, area: { x1: 12, y1: 1, x2: 28, y2: 8 } },
       { type: 'dog', count: 3, area: { x1: 26, y1: 3, x2: 37, y2: 11 } },
+    ],
+  },
+
+  canal: {
+    id: 'canal',
+    name: 'ชุมชนริมคลองสองพี่น้อง',
+    subtitle: 'Lv 13–35',
+    safe: false,
+    theme: 'canal',
+    spawn: { x: 1, y: 5 },
+    tiles: [
+      '############################################',
+      '#tt,,,,,,,,,,,tt,,,,,,,,,,,,,,,,tt,,,,,,,tt#',
+      '#,,,HHHH,,,,,,,,,,,,,HHHH,,,,,,,,,,,,HHHH,,#',
+      '#,,,HHHH,,,,,,,,,,,,,HHHH,,,,,,,,,,,,HHHH,,#',
+      '#,,,,WW,,,,,,,,,,,,,,,WW,,,,,,,,,,,,,,WW,,,#',
+      'P..........................................#',
+      '#,,,,WW,,,,,,,,,,,,,,,WW,,,,,,,,,,,,,,WW,,,#',
+      '#~~~~WW~~~ssssss~~~~~~WW~~~~~~~~~~~~~~WW~~~#',
+      '#~~~~WW~~ssssssss~~~~~WW~~~~ssssss~~~~WWss~#',
+      '#~~~~WW~~~ssssss~~~~~~WW~~~ssssssss~~~WWss~#',
+      '#~~~~WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWss~#',
+      '#~~~~~~~~~sssss~~~~~~~~~~~~~ssssss~~~ssssss#',
+      '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,ssssss~#',
+      '#tt,,,,,,,tt,,,,,,,,,,tt,,,,,,,,,,,,ssssss~#',
+      '############################################',
+    ],
+    portals: [
+      { x: 0, y: 5, w: 1, h: 1, to: 'alley', tx: 38, ty: 3, label: '← ซอยหลังตลาด' },
+    ],
+    npcs: [],
+    objects: [],
+    spawns: [
+      { type: 'hyacinth', count: 8, area: { x1: 9, y1: 7, x2: 35, y2: 11 } },
+      { type: 'monitor', count: 6, area: { x1: 2, y1: 12, x2: 34, y2: 13 } },
+      // The flood lurks in the lagoon at the east end of the canal.
+      { type: 'flood', count: 1, area: { x1: 36, y1: 11, x2: 41, y2: 13 } },
     ],
   },
 };

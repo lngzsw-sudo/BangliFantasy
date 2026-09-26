@@ -34,7 +34,7 @@ export class UI {
 
   bindHud() {
     $('#btn-auto').onclick = () => this.net.send('auto', { on: !this.me?.auto.on });
-    $('#btn-potion').onclick = () => this.net.send('use', { item: 'oliang' });
+    $('#btn-potion').onclick = () => this.net.send('use', { item: 'potion' });
     $('#btn-bag').onclick = () => (this.panel?.kind === 'bag' ? this.closePanel() : this.openPanel({ kind: 'bag' }));
     $('#btn-emote').onclick = () => $('#emotes').classList.toggle('open');
     $('#btn-game').onclick = () => this.openMinigame();
@@ -54,7 +54,7 @@ export class UI {
       if (ev.key === 'Enter') {
         ev.preventDefault();
         $('#chat-input').focus();
-      } else if (ev.key === '1') this.net.send('use', { item: 'oliang' });
+      } else if (ev.key === '1') this.net.send('use', { item: 'potion' });
       else if (ev.key === 'Escape') this.closePanel();
     });
   }
@@ -67,7 +67,7 @@ export class UI {
     $('#me-lvl').textContent = me.level;
     $('#coins').textContent = me.coins;
     $('#junk').textContent = me.inv.junk ?? 0;
-    $('#potions').textContent = me.inv.oliang ?? 0;
+    $('#potions').textContent = Object.keys(ITEMS).reduce((n, id) => n + (ITEMS[id].heal ? me.inv[id] ?? 0 : 0), 0);
     const need = expToNext(me.level);
     $('#exp-fill').style.width = `${(100 * me.exp) / need}%`;
     $('#exp-text').textContent = `EXP ${me.exp}/${need}`;

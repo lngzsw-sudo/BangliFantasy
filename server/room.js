@@ -1,8 +1,8 @@
 import {
   DROP_LIFETIME_MS, DROP_OWNER_LOCK_MS, MONSTERS, PICKUP_RANGE, POTION_COOLDOWN_MS,
-  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, playerStats,
+  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, PLAYER_SPEED, playerStats,
 } from '../shared/constants.js';
-import { buildBlockedGrid, portalAt, roomSize } from '../shared/maps.js';
+import { buildBlockedGrid, portalAt, roomSize, tileAt } from '../shared/maps.js';
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
 import { recordKill, bountyView } from './bounty.js';
 import { addExp, killExp, randInt, rollDamage } from './combat.js';
@@ -135,11 +135,13 @@ export class GameRoom {
     p.goal = null;
   }
 
-  usePotion(p, now) {
-    if (p.dead || !(p.profile.inv.oliang > 0)) return false;
+  // item: a specific potion, or null to pick the best one for the HP missing.
+  usePotion(p, now, item = null) {
+    item ??= pickPotion(p);
+    if (p.dead || !item || !ITEMS[item]?.heal || !(p.profile.inv[item] > 0)) return false;
     if (now < (p.potionReadyAt ?? 0)) return false;
-    const heal = Math.min(ITEMS.oliang.heal, p.stats.maxHp - p.hp);
-    p.profile.inv.oliang--;
+    const heal = Math.min(ITEMS[item].heal, p.stats.maxHp - p.hp);
+    p.profile.inv[item]--;
     p.potionReadyAt = now + POTION_COOLDOWN_MS;
     p.hp += heal;
     p.dirty = true;
@@ -157,7 +159,7 @@ export class GameRoom {
     for (let tries = 0; tries < 50 && !pos; tries++) {
       const x = x1 + Math.floor(this.rng() * (x2 - x1 + 1));
       const y = y1 + Math.floor(this.rng() * (y2 - y1 + 1));
-      if (!isBlocked(this.grid, x, y)) pos = { x, y };
+      if (this.canStand(def, x, y)) pos = { x, y };
     }
     if (!pos) return null;
     const m = {
@@ -165,10 +167,16 @@ export class GameRoom {
       x: pos.x, y: pos.y, home: { ...pos }, dir: 1,
       hp: def.hp, speed: def.speed, path: [], aggro: null,
       nextAttackAt: 0, idleUntil: 0, repathAt: 0, dirty: false,
+      damageBy: new Map(), waveAt: 0, waveHitAt: 0,
     };
     this.monsters.set(m.id, m);
     this.broadcast({ t: 'join', e: monsterView(m) });
     return m;
+  }
+
+  // Walkable, and on the monster's habitat tile if it has one (e.g. shallows).
+  canStand(def, x, y) {
+    return !isBlocked(this.grid, x, y) && (!def.habitat || tileAt(this.def, x, y) === def.habitat);
   }
 
   damageMonster(m, attacker, roll, now) {
@@ -176,6 +184,7 @@ export class GameRoom {
     if (!roll.n) return;
     m.hp -= roll.n;
     m.dirty = true;
+    m.damageBy.set(attacker.id, (m.damageBy.get(attacker.id) ?? 0) + roll.n);
     if (!m.aggro) {
       m.aggro = attacker.id;
       // Flock monsters (pigeons) pile on together.
@@ -195,16 +204,23 @@ export class GameRoom {
     this.respawns.push({ spawn: m.spawn, at: now + m.def.respawnMs });
     for (const p of this.players.values()) if (p.target === m.id) p.target = null;
 
+    // Bosses reward everyone who pulled their weight; others only the killer.
+    const winners = m.def.shareLoot
+      ? [...this.players.values()].filter((p) => (m.damageBy.get(p.id) ?? 0) >= m.def.hp * m.def.shareLoot)
+      : [killer];
+    if (!winners.includes(killer)) winners.push(killer);
     const at = tileOf(m);
-    this.spawnDrop('coin', randInt(this.rng, m.def.coins), at, killer, now);
-    for (const d of m.def.drops) {
-      if (this.rng() < d.chance) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, killer, now);
+    for (const w of winners) {
+      this.spawnDrop('coin', randInt(this.rng, m.def.coins), at, w, now);
+      for (const d of m.def.drops) {
+        if (this.rng() < d.chance) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, w, now);
+      }
+      this.grantExp(w, killExp(m.def.exp, m.def.level, w.profile.level));
+      for (const b of recordKill(w.profile, m.type, now)) {
+        w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
+      }
     }
-
-    this.grantExp(killer, killExp(m.def.exp, m.def.level, killer.profile.level));
-    for (const b of recordKill(killer.profile, m.type, now)) {
-      killer.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
-    }
+    if (m.def.boss) this.broadcast({ t: 'sys', text: `🎉 ${winners.map((w) => w.profile.name).join(', ')} ปราบ${m.def.name}สำเร็จ!` });
   }
 
   grantExp(p, amount) {
@@ -262,6 +278,8 @@ export class GameRoom {
       return;
     }
     this.regen(p, now, dt);
+    if (this.tickPoison(p, now)) return;
+    p.speed = now < (p.slowUntil ?? 0) ? PLAYER_SPEED * p.slowFactor : PLAYER_SPEED;
     if (p.auto.on) this.botThink(p, now);
 
     if (p.target) {
@@ -289,6 +307,26 @@ export class GameRoom {
 
     const portal = portalAt(this.def, p.x, p.y);
     if (portal) this.world.transfer(p, portal.to, portal.tx, portal.ty);
+  }
+
+  // Returns true if the poison killed the player.
+  tickPoison(p, now) {
+    const poison = p.poison;
+    if (!poison) return false;
+    // One tick per second, including the last one at `until`.
+    if (poison.next > poison.until) {
+      p.poison = null;
+      return false;
+    }
+    if (now < poison.next) return false;
+    poison.next += 1000;
+    p.hp -= poison.dmg;
+    p.dirty = true;
+    p.lastCombatAt = now;
+    this.broadcast({ t: 'hit', a: poison.src, d: p.id, n: poison.dmg, poison: true });
+    if (p.hp > 0) return false;
+    this.killPlayer(p, now);
+    return true;
   }
 
   regen(p, now, dt) {
@@ -370,8 +408,13 @@ export class GameRoom {
       m.aggro = null;
       this.setPath(m, m.home.x, m.home.y);
       m.hp = m.def.hp;
+      m.damageBy.clear();
+      m.waveAt = 0;
+      m.waveHitAt = 0;
       m.dirty = true;
     } else if (p) {
+      // While a wave is building up the boss stays put.
+      if (m.def.wave && this.tickWave(m, now)) return;
       if (dist(m, p) <= m.def.range) {
         m.path = [];
         if (Math.abs(p.x - m.x) > 0.05) m.dir = p.x > m.x ? 1 : -1;
@@ -386,7 +429,7 @@ export class GameRoom {
       const r = m.def.wanderRadius;
       const x = m.home.x + Math.round((this.rng() * 2 - 1) * r);
       const y = m.home.y + Math.round((this.rng() * 2 - 1) * r);
-      if (!isBlocked(this.grid, x, y)) this.setPath(m, x, y);
+      if (this.canStand(m.def, x, y)) this.setPath(m, x, y);
     }
     advance(m, dt);
   }
@@ -411,7 +454,49 @@ export class GameRoom {
     p.dirty = true;
     // Being hit with nothing targeted: fight back (classic MMO auto-counter).
     if (!p.target && !p.path.length) p.target = m.id;
-    if (p.hp <= 0) this.killPlayer(p, now);
+    if (p.hp <= 0) return this.killPlayer(p, now);
+    this.applyOnHit(m, p, now);
+  }
+
+  // Status effects some monsters' hits carry (GDD: slow, poison).
+  applyOnHit(m, p, now) {
+    const { slow, poison } = m.def.onHit ?? {};
+    if (slow) {
+      p.slowUntil = now + slow.ms;
+      p.slowFactor = slow.factor;
+      this.broadcast({ t: 'fx', id: p.id, fx: 'slow', ms: slow.ms });
+    }
+    if (poison) {
+      p.poison = { until: now + poison.ms, next: now + 1000, dmg: poison.dmg, src: m.id };
+      this.broadcast({ t: 'fx', id: p.id, fx: 'poison', ms: poison.ms });
+    }
+  }
+
+  // Boss flood wave: announce, give players a moment to step out, then hit
+  // everyone still inside the radius.
+  tickWave(m, now) {
+    const w = m.def.wave;
+    if (m.waveHitAt) {
+      if (now < m.waveHitAt) return true;
+      m.waveHitAt = 0;
+      for (const p of this.players.values()) {
+        if (p.dead || dist(p, m) > w.radius) continue;
+        const n = Math.max(1, w.dmg - p.stats.def);
+        p.hp -= n;
+        p.dirty = true;
+        p.lastCombatAt = now;
+        this.broadcast({ t: 'hit', a: m.id, d: p.id, n, wave: true });
+        if (p.hp <= 0) this.killPlayer(p, now);
+      }
+      return false;
+    }
+    if (!m.waveAt) m.waveAt = now + w.every;
+    if (now < m.waveAt) return false;
+    m.waveAt = now + w.every;
+    m.waveHitAt = now + w.windup;
+    m.path = [];
+    this.broadcast({ t: 'fx', id: m.id, fx: 'wave', r: w.radius, ms: w.windup });
+    return true;
   }
 
   killPlayer(p, now) {
@@ -420,6 +505,8 @@ export class GameRoom {
     p.respawnAt = now + DEATH_RESPAWN_MS;
     p.target = null;
     p.path = [];
+    p.poison = null;
+    p.slowUntil = 0;
     p.dirty = true;
     if (p.auto.on) {
       p.auto.on = false;
@@ -470,7 +557,7 @@ export function playerView(p) {
 
 export function monsterView(m) {
   return {
-    id: m.id, k: 'm', type: m.type, name: m.def.name, lvl: m.def.level,
+    id: m.id, k: 'm', type: m.type, name: m.def.name, lvl: m.def.level, boss: m.def.boss || undefined,
     x: m.x, y: m.y, dir: m.dir, hp: m.hp, maxHp: m.def.hp,
   };
 }
@@ -485,6 +572,14 @@ export function selfView(p, now) {
     id: p.id, name, level, exp, coins, inv, equip, stats: p.stats, hp: Math.round(p.hp), auto: p.auto,
     bounty: bountyView(p.profile, now),
   };
+}
+
+// Biggest heal that isn't wasted; otherwise whatever is left.
+function pickPotion(p) {
+  const missing = p.stats.maxHp - p.hp;
+  const have = Object.keys(ITEMS).filter((id) => ITEMS[id].heal && p.profile.inv[id] > 0);
+  have.sort((a, b) => ITEMS[b].heal - ITEMS[a].heal);
+  return have.find((id) => ITEMS[id].heal <= missing) ?? have.at(-1) ?? null;
 }
 
 export function bountyTitle(b) {

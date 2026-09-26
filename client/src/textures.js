@@ -30,6 +30,7 @@ function speckle(ctx, rnd, colors, count) {
 const THEMES = {
   market: { wall: '#7a4b3a', mortar: '#5a3328', floor: '#d8c9a8', floorLine: '#c4b28e' },
   alley: { wall: '#5a5d66', mortar: '#44464d', floor: '#a3a7ab', floorLine: '#8d9195' },
+  canal: { wall: '#5b4a3a', mortar: '#46382b', floor: '#c9b48a', floorLine: '#b39d72' },
 };
 
 // Draw one tile variant. `v` picks a noise seed so floors don't look tiled.
@@ -122,6 +123,32 @@ function drawTile(ctx, ch, theme, v) {
       fill('#fff3d6', 2 + (v % 2), 3, 4, 4), fill('#ffe066', 8, 4, 5, 3), fill('#fff3d6', 5, 8, 5, 3);
       fill('#d94f4f', 3 + (v % 2), 3, 1, 1), fill('#d94f4f', 10, 4, 1, 1);
       break;
+    case 'W':
+      // สะพานไม้: planks over water.
+      fill('#3a6f8f');
+      fill('#8b5a33', 0, 0, S, S);
+      ctx.fillStyle = '#6b4226';
+      for (let y = 3; y < S; y += 4) ctx.fillRect(0, y, S, 1);
+      ctx.fillStyle = '#a8703f';
+      for (let y = 0; y < S; y += 4) ctx.fillRect((v * 5 + y) % 12, y, 3, 1);
+      fill('#3b2a20', v % 2 ? 2 : 12, 1, 1, 1), fill('#3b2a20', v % 2 ? 9 : 5, 9, 1, 1);
+      break;
+    case 's':
+      // น้ำตื้น: lighter, greener water you can wade through.
+      fill('#5f9ea0');
+      ctx.fillStyle = '#86c0bf';
+      for (let i = 0; i < 3; i++) ctx.fillRect(1 + ((i * 6 + v * 4) % 12), 2 + i * 5, 3, 1);
+      speckle(ctx, rnd, ['#4f8e90', '#6fb0ae', '#7a9a4a'], 10);
+      break;
+    case 'H':
+      // บ้านริมน้ำ: wooden wall with a window and a tin roof edge.
+      fill('#7a5230');
+      ctx.fillStyle = '#5e3e22';
+      for (let x = 0; x < S; x += 4) ctx.fillRect(x, 0, 1, S);
+      fill('#9aa3ad', 0, 0, S, 3);
+      fill('#6e7682', 0, 2, S, 1);
+      if (v !== 1) fill(OUTLINE, 5, 6, 6, 5), fill('#ffe8a3', 6, 7, 4, 3);
+      break;
     case '~':
       fill('#3a6f8f');
       ctx.fillStyle = '#5b93b3';
@@ -147,7 +174,7 @@ export function tileKey(ch, theme, v) {
 export function makeTextures(scene) {
   const tex = scene.textures;
   for (const theme of Object.keys(THEMES)) {
-    for (const ch of '.,=#ATtBKN~P') {
+    for (const ch of '.,=#ATtBKN~PWsH') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
         const c = canvas(TILE, TILE);
         drawTile(c.getContext('2d'), ch, theme, v);
