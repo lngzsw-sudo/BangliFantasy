@@ -373,7 +373,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   // Status effects and boss telegraphs from the server.
-  onFx({ id, fx, n, ms, r }) {
+  onFx({ id, fx, n, ms, r, label }) {
     const ent = this.ents.get(id);
     if (!ent || !this.fx) return;
     if (fx === 'heal') return this.floatText(id, `+${n}`, '#6dff8a');
@@ -388,6 +388,10 @@ export class WorldScene extends Phaser.Scene {
         this.restoreTint(ent);
       }, ms);
     }
+    if (fx === 'charge') {
+      this.floatText(id, '💢 พุ่งชน!', '#ff8a80', 18);
+      this.tweens.add({ targets: ent.rig, angle: 8 * (ent.data.dir || 1), duration: 120, yoyo: true, repeat: 2 });
+    }
     if (fx === 'wave') {
       // Growing ring = get out before it fills up.
       const radius = r * this.T;
@@ -395,7 +399,7 @@ export class WorldScene extends Phaser.Scene {
       const fill = this.add.circle(ent.c.x, ent.c.y, 1, 0x5b93b3, 0.35);
       ring.setDepth(ent.c.depth - 1);
       fill.setDepth(ent.c.depth - 1);
-      this.floatText(id, '🌊 น้ำกำลังทะลัก!', '#9cc8e0', 16);
+      this.floatText(id, label ?? '🌊 น้ำกำลังทะลัก!', '#9cc8e0', 16);
       this.tweens.add({
         targets: fill, radius, duration: ms,
         onComplete: () => {

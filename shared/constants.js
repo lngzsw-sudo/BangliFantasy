@@ -63,6 +63,10 @@ export const ITEMS = {
   hyacinth: { name: 'ก้านผักตบชวา', icon: '🌿', desc: 'ดรอปจากผักตบชวากลายพันธุ์ — เอาไปสานของ' },
   scale: { name: 'เกล็ดตัวเงินตัวทอง', icon: '🦎', desc: 'ดรอปจากตัวเงินตัวทอง — ว่ากันว่าเรียกทรัพย์' },
   flood_badge: { name: 'เหรียญกู้ภัยน้ำท่วม', icon: '🏅', desc: 'ได้จากการปราบมวลน้ำท่วม' },
+  straw: { name: 'ฟางข้าว', icon: '🌾', desc: 'ดรอปจากหุ่นไล่กา — วัตถุดิบหมวก' },
+  stinger: { name: 'เหล็กในแตน', icon: '🐝', desc: 'ดรอปจากฝูงแตน — วัตถุดิบแจ็กเก็ต' },
+  horn: { name: 'เขาควายเหล็ก', icon: '🐃', desc: 'ดรอปจากควายเหล็กคลั่ง — วัตถุดิบแจ็กเก็ต' },
+  speaker: { name: 'ลำโพงจิ๋วงานวัด', icon: '🔊', desc: 'ได้จากการปราบรถพ่วงข้างแต่งซิ่ง' },
   vest_win: {
     name: 'เสื้อกั๊กวินมอเตอร์ไซค์', icon: '🦺',
     desc: 'ชุดแฟชั่น: เสื้อกั๊กส้มเบอร์ 69 ใส่แล้วดูมีคิว', slot: 'body',
@@ -78,6 +82,14 @@ export const ITEMS = {
   raincoat: {
     name: 'ชุดกันฝนกู้ภัยน้ำท่วม', icon: '🧥',
     desc: 'ชุดแฟชั่น: เสื้อกันฝนเหลืองสะท้อนแสง สำหรับผู้พิชิตมวลน้ำท่วม', slot: 'body',
+  },
+  hat_scarecrow: {
+    name: 'งอบหุ่นไล่กา', icon: '🎩',
+    desc: 'หมวกแฟชั่น: งอบฟางปีกกว้าง สเต็ปเทพเหมือนเจ้าของเดิม', slot: 'head',
+  },
+  jacket_racer: {
+    name: 'แจ็กเก็ตสายซิ่งงานวัด', icon: '🧥',
+    desc: 'ชุดแฟชั่น: แจ็กเก็ตหนังปักไฟ LED ของคนที่ล้มรถพ่วงข้างได้', slot: 'body',
   },
 };
 
@@ -96,6 +108,8 @@ export const RECIPES = {
   hat_straw: { coins: 80, items: { feather: 6, bone: 2 } },
   hat_hyacinth: { coins: 150, items: { hyacinth: 12 } },
   raincoat: { coins: 300, items: { flood_badge: 1, scale: 4, hyacinth: 5 } },
+  hat_scarecrow: { coins: 400, items: { straw: 15 } },
+  jacket_racer: { coins: 800, items: { speaker: 1, horn: 3, stinger: 10 } },
 };
 
 export const MONSTERS = {
@@ -194,6 +208,86 @@ export const MONSTERS = {
     shareLoot: 0.1,
     wave: { every: 7000, windup: 1200, radius: 3, dmg: 25 },
   },
+
+  // --- ชานเมือง & โกดังร้าง (Room 04) ---
+  // Dances out of the way: 30% of attacks against it miss.
+  scarecrow: {
+    name: 'หุ่นไล่กาสเต็ปเทพ',
+    level: 26,
+    hp: 380, atk: 30, def: 8, aspd: 0.9, range: 1.4,
+    speed: 2.4, exp: 120,
+    coins: [25, 50],
+    drops: [{ item: 'straw', chance: 0.6, amount: [1, 3] }],
+    respawnMs: 6000,
+    wanderRadius: 3,
+    leash: 8,
+    habitat: 'r',
+    evade: 0.3,
+  },
+  // A swarm: fast, aggressive, fights as a flock and stings with poison.
+  wasp: {
+    name: 'ฝูงแตนแตกรัง',
+    level: 30,
+    hp: 220, atk: 26, def: 4, aspd: 1.4, range: 1.3,
+    speed: 3.6, exp: 110,
+    coins: [15, 35],
+    drops: [{ item: 'stinger', chance: 0.5, amount: [1, 2] }],
+    respawnMs: 5000,
+    wanderRadius: 3,
+    leash: 9,
+    aggroRange: 3,
+    flock: 3,
+    onHit: { poison: { ms: 4000, dmg: 8 } },
+  },
+  // Iron hide, and every few seconds it charges from range for double damage.
+  buffalo: {
+    name: 'ควายเหล็กคลั่ง',
+    level: 34,
+    hp: 900, atk: 48, def: 18, aspd: 0.6, range: 1.6,
+    speed: 2.0, exp: 260,
+    coins: [40, 90],
+    drops: [
+      { item: 'horn', chance: 0.35, amount: [1, 1] },
+      { item: 'junk', chance: 0.5, amount: [2, 4] },
+    ],
+    respawnMs: 9000,
+    wanderRadius: 3,
+    leash: 10,
+    aggroRange: 3.5,
+    habitat: '=',
+    charge: { every: 6000, minRange: 2.5, speedMult: 3, dmgMult: 2 },
+  },
+  // World boss (GDD: needs a party, fights on a timetable). Spawns on a
+  // schedule announced to every room, drives off if not beaten in time, and
+  // shares loot with everyone who did 5% of its HP.
+  sidecar: {
+    name: 'รถพ่วงข้างแต่งซิ่งติดลำโพงงานวัด',
+    boss: true,
+    worldBoss: true,
+    level: 40,
+    hp: 9000, atk: 55, def: 20, aspd: 0.7, range: 2.4,
+    speed: 1.6, exp: 3000,
+    coins: [300, 600],
+    drops: [
+      { item: 'speaker', chance: 1, amount: [1, 1] },
+      { item: 'horn', chance: 0.5, amount: [1, 2] },
+    ],
+    respawnMs: 0,
+    wanderRadius: 3,
+    leash: 8,
+    aggroRange: 4,
+    shareLoot: 0.05,
+    wave: { every: 6000, windup: 1400, radius: 4, dmg: 70, label: '🔊 เบสกระแทก!' },
+  },
+};
+
+// When the world boss appears (server clock). First spawn a few minutes
+// after the server starts, then on a fixed interval. Overridable by env.
+export const WORLD_BOSS = {
+  firstMs: 5 * 60_000,
+  everyMs: 30 * 60_000,
+  warnMs: 60_000,
+  stayMs: 10 * 60_000,
 };
 
 // The auto-farm bot won't start fights with monsters this many levels above you.
@@ -213,9 +307,12 @@ export const BOUNTY_POOL = [
   { id: 'monitor5', zone: 'canal', type: 'monitor', need: 5, coins: 200, exp: 350 },
   { id: 'monitor12', zone: 'canal', type: 'monitor', need: 12, coins: 450, exp: 800 },
   { id: 'flood1', zone: 'canal', type: 'flood', need: 1, coins: 300, exp: 600 },
+  { id: 'scarecrow10', zone: 'suburb', type: 'scarecrow', need: 10, coins: 500, exp: 1500 },
+  { id: 'wasp15', zone: 'suburb', type: 'wasp', need: 15, coins: 600, exp: 1800 },
+  { id: 'buffalo5', zone: 'suburb', type: 'buffalo', need: 5, coins: 800, exp: 2400 },
 ];
 // How many bounties each zone gets per day (each for a different monster).
-export const BOUNTY_SLOTS = { alley: 2, canal: 2 };
+export const BOUNTY_SLOTS = { alley: 2, canal: 1, suburb: 1 };
 const BANGKOK_OFFSET_MS = 7 * 3600 * 1000;
 
 export function bountyDay(now) {

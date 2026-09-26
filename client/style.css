@@ -172,6 +172,7 @@ button.link { background: none; border: none; box-shadow: none; color: var(--mut
 #chat-log:empty { display: none; }
 #chat-log i { color: var(--muted); }
 #chat-log b { color: var(--accent); }
+#chat-log b.announce { color: #ff8a80; }
 #chat-form { display: flex; gap: 6px; }
 #chat-input {
   flex: 1; min-width: 0; padding: 10px 12px; font: inherit; font-size: 16px;

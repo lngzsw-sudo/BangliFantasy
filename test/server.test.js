@@ -153,7 +153,10 @@ test('auto-farm hunts rats on its own and drinks potions', async () => {
   world.transfer(p, 'alley', 1, 6);
   a.client.message({ t: 'auto', on: true, pct: 90 });
   assert.equal(p.auto.on, true);
-  p.hp = 10;
+  // Below the 90% threshold (so it drinks) but not so low that one unlucky
+  // pigeon flock ends the run: this test is about the bot, not survival odds.
+  p.hp = p.stats.maxHp / 2;
+  p.profile.inv.oliang = 5;
   const potions = p.profile.inv.oliang;
   run(60000);
   const kills = a.inbox.filter((m) => m.t === 'die' && m.id.startsWith('m')).length;

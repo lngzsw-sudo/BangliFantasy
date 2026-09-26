@@ -65,7 +65,13 @@ const http = createServer((req, res) => {
 
 const store = await createStore({ databaseUrl: process.env.DATABASE_URL, dataFile: DATA_FILE });
 console.log(`[store] using ${process.env.DATABASE_URL ? 'Postgres (DATABASE_URL)' : `JSON file ${DATA_FILE}`}`);
-const world = new World({ store });
+// Optional overrides (minutes) for the world boss timetable, handy for play-tests.
+const minutes = (v) => (Number(v) > 0 ? Number(v) * 60_000 : undefined);
+const worldBoss = Object.fromEntries(Object.entries({
+  firstMs: minutes(process.env.WORLD_BOSS_FIRST_MIN),
+  everyMs: minutes(process.env.WORLD_BOSS_EVERY_MIN),
+}).filter(([, v]) => v));
+const world = new World({ store, worldBoss });
 const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 4096 });
 
 wss.on('connection', (ws) => {
