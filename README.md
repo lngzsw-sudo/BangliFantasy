@@ -53,6 +53,8 @@ creates its `players` table on first start.
 ## How to play
 
 - **Tap/click the ground** to walk (server-side A* pathfinding).
+- **🗺️ เดินทาง** lists the exits of the room you're in; pick one and your character
+  walks there. Arrows at the screen edge point to exits that are off-screen.
 - **Tap a monster** to lock on. You walk into weapon range and trade hits based on ASPD.
   The alley gets harder from west to east:
 

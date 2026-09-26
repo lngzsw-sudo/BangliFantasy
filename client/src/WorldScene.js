@@ -123,6 +123,15 @@ export class WorldScene extends Phaser.Scene {
       this.tweens.add({ targets: icon, y: icon.y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       this.mapLayer.add(icon);
     }
+    // Arrows pinned to the screen edge pointing at off-screen exits.
+    this.portalMarks?.forEach((m) => m.destroy());
+    this.portalMarks = room.portals.map((p) => {
+      const arrow = text(this, 0, 0, '➜', { fontSize: '26px', color: '#e9d7ff' }).setOrigin(0.5);
+      const label = text(this, 0, 16, ROOMS[p.to].name, { fontSize: '11px', color: '#e9d7ff' }).setOrigin(0.5, 0);
+      const mark = this.add.container(0, 0, [arrow, label]).setScrollFactor(0).setDepth(2e6).setVisible(false);
+      this.tweens.add({ targets: arrow, scale: 1.25, duration: 500, yoyo: true, repeat: -1 });
+      return Object.assign(mark, { portal: p, arrow, label });
+    });
     this.npcViews?.forEach((v) => v.destroy());
     this.npcViews = room.npcs.map((npc) => {
       const c = this.add.container(this.px(npc.x), this.feetY(npc.y)).setDepth(this.feetY(npc.y));
@@ -497,6 +506,33 @@ export class WorldScene extends Phaser.Scene {
     this.net.send('move', { x: tx, y: ty });
   }
 
+  // Used by the travel panel: walk onto the exit leading to another room.
+  walkToPortal(portal) {
+    this.pending = null;
+    this.setTarget(null);
+    this.showMarker(portal.x, portal.y);
+    this.net.send('move', { x: portal.x, y: portal.y });
+  }
+
+  updatePortalMarks() {
+    const cam = this.cameras.main;
+    for (const mark of this.portalMarks ?? []) {
+      const p = mark.portal;
+      const sx = (p.x + p.w / 2) * this.T - cam.scrollX;
+      const sy = (p.y + p.h / 2) * this.T - cam.scrollY;
+      const inside = sx > 0 && sx < cam.width && sy > 0 && sy < cam.height;
+      mark.setVisible(!inside);
+      if (inside) continue;
+      // Keep clear of the HUD at the top and the buttons/chat at the bottom.
+      const x = Phaser.Math.Clamp(sx, 30, cam.width - 30);
+      const y = Phaser.Math.Clamp(sy, 130, cam.height - 290);
+      mark.setPosition(x, y);
+      mark.arrow.setRotation(Math.atan2(sy - y, sx - x));
+      const right = x > cam.width / 2;
+      mark.label.setOrigin(right ? 1 : 0, 0).setX(right ? 12 : -12);
+    }
+  }
+
   walkAndInteract(p) {
     this.pending = p;
     const me = this.ents.get(this.meId);
@@ -554,6 +590,7 @@ export class WorldScene extends Phaser.Scene {
       this.interact(this.pending);
     }
     this.followCamera(dt);
+    this.updatePortalMarks();
   }
 
   followCamera(dt, snap = false) {
