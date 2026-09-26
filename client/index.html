@@ -24,11 +24,17 @@
         <button type="button" role="tab" data-mode="register">สมัครใหม่</button>
       </div>
       <input id="login-name" name="username" maxlength="16" placeholder="ชื่อตัวละคร" aria-label="ชื่อตัวละคร" autocomplete="username" required>
+      <input id="login-code" maxlength="20" placeholder="รหัสกู้คืน เช่น ABCD-EFGH-JKMN" aria-label="รหัสกู้คืน" autocomplete="off" hidden>
       <input id="login-pass" name="password" type="password" maxlength="72" placeholder="รหัสผ่าน" aria-label="รหัสผ่าน" autocomplete="current-password" required>
+      <label class="remember"><input type="checkbox" id="login-remember" checked> จดจำฉันไว้ในเครื่องนี้</label>
       <button type="submit" id="login-submit">เข้าตลาด 🛵</button>
       <p id="login-error" role="alert"></p>
       <p class="hint" id="login-hint"></p>
+      <button type="button" id="login-forgot" class="link">ลืมรหัสผ่าน?</button>
     </form>
+    <div id="login-auto" hidden>
+      <p>กำลังเข้าสู่ระบบในชื่อ <b id="login-auto-name"></b>…</p>
+    </div>
   </div>
 
   <!-- HUD -->
@@ -88,6 +94,20 @@
       <div id="mg-result" hidden>
         <p>จับคู่ครบ! ได้ 🪙 <b id="mg-reward">0</b></p>
         <button id="mg-again">เล่นอีกตา</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recovery code: shown once after register / reset / request -->
+  <div id="recovery" hidden>
+    <div class="recovery-box" role="dialog" aria-labelledby="recovery-title">
+      <h2 id="recovery-title">🔑 รหัสกู้คืนบัญชี</h2>
+      <p>ถ้าลืมรหัสผ่าน ใช้รหัสนี้ตั้งรหัสผ่านใหม่ได้ที่หน้าเข้าสู่ระบบ → <b>ลืมรหัสผ่าน?</b></p>
+      <code id="recovery-code"></code>
+      <p class="warn">⚠️ รหัสนี้จะแสดงแค่ครั้งนี้ครั้งเดียว — แคปหน้าจอหรือจดเก็บไว้ อย่าให้คนอื่นเห็น</p>
+      <div class="recovery-actions">
+        <button id="recovery-copy" type="button">📋 คัดลอก</button>
+        <button id="recovery-ok" type="button">บันทึกไว้แล้ว ✓</button>
       </div>
     </div>
   </div>

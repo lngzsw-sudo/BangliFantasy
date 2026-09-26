@@ -31,10 +31,10 @@ export function makeWorld(seed = 1) {
 }
 
 // Connects a client and waits until the server has answered the hello.
-export async function join(world, name, { password = 'secret123', mode = 'register' } = {}) {
+export async function join(world, name, { password = 'secret123', mode = 'register', ...extra } = {}) {
   const inbox = [];
   const client = world.connect((m) => inbox.push(m), () => inbox.push({ t: 'closed' }));
-  client.message({ t: 'hello', name, password, mode });
+  client.message({ t: 'hello', name, password, mode, ...extra });
   for (let i = 0; i < 200 && !inbox.some((m) => m.t === 'welcome' || m.t === 'error'); i++) {
     await new Promise((r) => setTimeout(r, 10));
   }
