@@ -6,6 +6,7 @@ import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
 import { GameRoom, dist, newId, selfView } from './room.js';
 import { claimBounty } from './bounty.js';
+import { Parties } from './party.js';
 import {
   LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
   newSessionToken, normalizeRecoveryCode, verifyPassword,
@@ -13,6 +14,7 @@ import {
 import { migrateProfile } from './store.js';
 
 const SAVE_EVERY_MS = 30000;
+const PARTY_SYNC_MS = 500;
 const DAY_MS = 24 * 3600 * 1000;
 
 export function cleanChat(text) {
@@ -34,6 +36,8 @@ export class World {
     this.online = new Map(); // lower-case name -> player
     this.saving = new Map(); // lower-case name -> pending write
     this.limiter = new LoginLimiter({ now });
+    this.parties = new Parties(this);
+    this.lastPartySync = now();
     this.lastTick = now();
     this.lastSave = now();
   }
@@ -54,6 +58,10 @@ export class World {
     const dt = Math.min(0.5, (now - this.lastTick) / 1000);
     this.lastTick = now;
     for (const room of this.rooms.values()) room.tick(now, dt);
+    if (now - this.lastPartySync >= PARTY_SYNC_MS) {
+      this.lastPartySync = now;
+      this.parties.tick();
+    }
     if (now - this.lastSave > SAVE_EVERY_MS) {
       this.lastSave = now;
       for (const p of this.online.values()) this.save(p);
@@ -193,6 +201,7 @@ export class World {
     if (!p) return;
     conn.player = null;
     this.rooms.get(p.roomId)?.removePlayer(p);
+    this.parties.leave(p);
     this.save(p);
     if (this.online.get(p.key) === p) this.online.delete(p.key);
   }
@@ -306,10 +315,11 @@ const HANDLERS = {
     if (typeof id === 'string') room.attack(p, id);
   },
 
-  chat(p, room, { text }, now) {
+  chat(p, room, { text, party }, now) {
     text = cleanChat(text);
     if (!text || now - p.lastChatAt < CHAT_COOLDOWN_MS) return;
     p.lastChatAt = now;
+    if (party) return this.parties.chat(p, text);
     room.broadcast({ t: 'chat', id: p.id, name: p.profile.name, text });
   },
 
@@ -408,6 +418,26 @@ const HANDLERS = {
     p.recoveryHash = await hashPassword(normalizeRecoveryCode(code));
     await this.save(p);
     p.send({ t: 'recovery', code });
+  },
+
+  party_invite(p, room, { name }, now) {
+    this.parties.invite(p, name, now);
+  },
+
+  party_accept(p, room, { from }, now) {
+    this.parties.accept(p, from, now);
+  },
+
+  party_decline(p, room, { from }) {
+    this.parties.decline(p, from);
+  },
+
+  party_leave(p) {
+    this.parties.leave(p);
+  },
+
+  party_kick(p, room, { name }) {
+    this.parties.kick(p, name);
   },
 
   mg_open(p) {

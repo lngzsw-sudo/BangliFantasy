@@ -293,6 +293,11 @@ export const WORLD_BOSS = {
 // The auto-farm bot won't start fights with monsters this many levels above you.
 export const BOT_LEVEL_MARGIN = 2;
 
+// Parties: members in the same room within `range` tiles of a kill share its
+// EXP (split evenly, plus `bonus` per extra member) and its bounty credit,
+// may loot each other's drops, and pool their damage towards boss loot.
+export const PARTY = { max: 5, range: 12, bonus: 0.2, inviteMs: 60_000 };
+
 // Daily Bounty Board (GDD §2 Room 01). Everyone sees the same bounties each
 // day, picked from this pool by date; progress resets at midnight (Bangkok).
 export const BOUNTY_POOL = [

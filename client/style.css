@@ -173,6 +173,7 @@ button.link { background: none; border: none; box-shadow: none; color: var(--mut
 #chat-log i { color: var(--muted); }
 #chat-log b { color: var(--accent); }
 #chat-log b.announce { color: #ff8a80; }
+#chat-log .party b, #chat-log .party { color: var(--good); }
 #chat-form { display: flex; gap: 6px; }
 #chat-input {
   flex: 1; min-width: 0; padding: 10px 12px; font: inherit; font-size: 16px;
@@ -306,6 +307,27 @@ button.link { background: none; border: none; box-shadow: none; color: var(--mut
 .row-form input { flex: 1; min-width: 0; padding: 8px; font: inherit; border: 2px solid var(--ink); border-radius: 8px; background: #fff7e8; color: var(--ink); }
 .row-form button { padding: 8px 10px; background: var(--accent); color: var(--accent-ink); }
 button.danger { padding: 8px; background: #7a2e2e; }
+/* ---------- party ---------- */
+#party-list { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.pm { font-size: 11px; line-height: 1.2; }
+.pm .name { display: flex; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pm .name small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+.pm .bar { height: 6px; margin: 2px 0 0; }
+.pm .bar > div { background: var(--hp); }
+.pm.dead { opacity: 0.55; }
+#party-invite {
+  position: absolute; top: 34%; left: 50%; transform: translateX(-50%); z-index: 25;
+  width: min(320px, calc(100vw - 20px)); padding: 12px; text-align: center;
+  background: var(--panel-solid); border: 3px solid var(--ink); border-radius: 14px; box-shadow: 0 6px 0 var(--ink);
+}
+#party-invite p { margin: 0 0 10px; }
+#party-invite b { color: var(--accent); }
+button.primary { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.party-hint { color: var(--muted); font-size: 12px; margin: 6px 0 10px; }
+.row .icon.lead { font-size: 20px; }
+.row button.danger { background: #7a2e2e; color: var(--text); }
+h3.sub { margin: 12px 0 6px; font-size: 14px; color: var(--muted); }
+
 #disconnected {
   position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
   background: rgba(10, 6, 12, 0.8); text-align: center; font-size: 18px;
