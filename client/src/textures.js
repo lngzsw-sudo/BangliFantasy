@@ -1,6 +1,6 @@
 import { TILE } from '/shared/constants.js';
 import {
-  BODY_OVERLAYS, CHAR_FRAMES, DROP_ART, OUTLINE, RAT_FRAMES, RAT_PALETTE, WEAPON_ART,
+  BODY_OVERLAYS, CHAR_FRAMES, DROP_ART, MONSTER_ART, OUTLINE, WEAPON_ART,
   characterPalette, paint, shade,
 } from './art.js';
 
@@ -113,6 +113,15 @@ function drawTile(ctx, ch, theme, v) {
       fill(OUTLINE, 2, 12, 4, 4), fill(OUTLINE, 10, 12, 4, 4);
       fill('#777', 3, 13, 2, 2), fill('#777', 11, 13, 2, 2);
       break;
+    case 'N':
+      // กระดานรับงาน: wooden notice board with pinned papers.
+      fill(t.floor);
+      fill('#4a2c18', 2, 12, 2, 4), fill('#4a2c18', 12, 12, 2, 4);
+      fill(OUTLINE, 0, 1, 16, 12);
+      fill('#8b5a33', 1, 2, 14, 10);
+      fill('#fff3d6', 2 + (v % 2), 3, 4, 4), fill('#ffe066', 8, 4, 5, 3), fill('#fff3d6', 5, 8, 5, 3);
+      fill('#d94f4f', 3 + (v % 2), 3, 1, 1), fill('#d94f4f', 10, 4, 1, 1);
+      break;
     case '~':
       fill('#3a6f8f');
       ctx.fillStyle = '#5b93b3';
@@ -138,7 +147,7 @@ export function tileKey(ch, theme, v) {
 export function makeTextures(scene) {
   const tex = scene.textures;
   for (const theme of Object.keys(THEMES)) {
-    for (const ch of '.,=#ATtBK~P') {
+    for (const ch of '.,=#ATtBKN~P') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
         const c = canvas(TILE, TILE);
         drawTile(c.getContext('2d'), ch, theme, v);
@@ -146,11 +155,13 @@ export function makeTextures(scene) {
       }
     }
   }
-  RAT_FRAMES.forEach((rows, i) => {
-    const c = canvas(16, 16);
-    paint(c.getContext('2d'), rows, RAT_PALETTE);
-    tex.addCanvas(`rat_${i}`, c);
-  });
+  for (const [type, art] of Object.entries(MONSTER_ART)) {
+    art.frames.forEach((rows, i) => {
+      const c = canvas(16, 16);
+      paint(c.getContext('2d'), rows, art.palette);
+      tex.addCanvas(`${type}_${i}`, c);
+    });
+  }
   for (const [id, art] of Object.entries(DROP_ART)) {
     const c = canvas(8, 8);
     paint(c.getContext('2d'), art.rows, art.palette);
@@ -171,16 +182,21 @@ export function makeTextures(scene) {
 }
 
 // Characters are generated per look/outfit combination on first use.
-export function characterTexture(scene, look, body) {
-  const key = `ch_${look.skin}${look.hair}${look.shirt}_${body ?? 'none'}`;
+export function characterTexture(scene, look, body, head) {
+  const key = `ch_${look.skin}${look.hair}${look.shirt}_${body ?? 'none'}_${head ?? 'none'}`;
   if (!scene.textures.exists(`${key}_0`)) {
     const palette = characterPalette(look);
     CHAR_FRAMES.forEach((rows, i) => {
       const c = canvas(16, 16);
       const ctx = c.getContext('2d');
       paint(ctx, rows, palette);
-      const overlay = BODY_OVERLAYS[body];
-      if (overlay) paint(ctx, overlay.rows, overlay.palette);
+      for (const id of [body, head]) {
+        const overlay = BODY_OVERLAYS[id];
+        if (!overlay) continue;
+        // The walk frame's head is one pixel lower, so hats follow it.
+        const dy = overlay.followsHead && i === 1 ? 1 : 0;
+        paint(ctx, overlay.rows, overlay.palette, 0, dy);
+      }
       scene.textures.addCanvas(`${key}_${i}`, c);
     });
   }

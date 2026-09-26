@@ -215,6 +215,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .row .mats .miss { color: var(--bad); }
 .row button { padding: 8px 12px; flex: none; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
 .row button:disabled { background: #4a3f55; color: var(--text); }
+.progress { position: relative; display: block; height: 14px; margin: 4px 0 2px; background: #1f1a24; border-radius: 4px; overflow: hidden; }
+.progress span { display: block; height: 100%; background: var(--good); }
+.progress em { position: absolute; inset: 0; font-style: normal; font-size: 10px; line-height: 14px; text-align: center; text-shadow: 1px 1px 0 #000; }
 .stats { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .stats span { padding: 3px 8px; background: #1f1a24; border-radius: 6px; font-size: 12px; }
 .bot-cfg { display: block; font-size: 13px; margin: 4px 0 10px; }

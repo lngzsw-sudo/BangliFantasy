@@ -23,6 +23,14 @@ export function addExp(profile, amount) {
   return gained;
 }
 
+// Out-levelling a monster by more than 3 cuts its EXP by 20% per extra level,
+// down to 10%, so each zone stops being worth farming after a while.
+export function killExp(baseExp, monsterLevel, playerLevel) {
+  const over = playerLevel - monsterLevel - 3;
+  if (over <= 0) return baseExp;
+  return Math.max(1, Math.round(baseExp * Math.max(0.1, 1 - 0.2 * over)));
+}
+
 export function randInt(rng, [lo, hi]) {
   return lo + Math.floor(rng() * (hi - lo + 1));
 }

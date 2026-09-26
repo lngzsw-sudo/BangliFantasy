@@ -1,10 +1,11 @@
 import {
   DROP_LIFETIME_MS, DROP_OWNER_LOCK_MS, MONSTERS, PICKUP_RANGE, POTION_COOLDOWN_MS,
-  DEATH_RESPAWN_MS, ITEMS, playerStats,
+  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, playerStats,
 } from '../shared/constants.js';
 import { buildBlockedGrid, portalAt, roomSize } from '../shared/maps.js';
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
-import { addExp, randInt, rollDamage } from './combat.js';
+import { recordKill, bountyView } from './bounty.js';
+import { addExp, killExp, randInt, rollDamage } from './combat.js';
 
 let nextId = 1;
 export const newId = (prefix) => `${prefix}${nextId++}`;
@@ -175,7 +176,15 @@ export class GameRoom {
     if (!roll.n) return;
     m.hp -= roll.n;
     m.dirty = true;
-    m.aggro ??= attacker.id;
+    if (!m.aggro) {
+      m.aggro = attacker.id;
+      // Flock monsters (pigeons) pile on together.
+      if (m.def.flock) {
+        for (const o of this.monsters.values()) {
+          if (o.type === m.type && !o.aggro && dist(o, m) <= m.def.flock) o.aggro = attacker.id;
+        }
+      }
+    }
     attacker.lastCombatAt = now;
     if (m.hp <= 0) this.killMonster(m, attacker, now);
   }
@@ -192,15 +201,22 @@ export class GameRoom {
       if (this.rng() < d.chance) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, killer, now);
     }
 
-    const before = killer.profile.level;
-    const levels = addExp(killer.profile, m.def.exp);
-    killer.profileDirty = true;
+    this.grantExp(killer, killExp(m.def.exp, m.def.level, killer.profile.level));
+    for (const b of recordKill(killer.profile, m.type, now)) {
+      killer.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
+    }
+  }
+
+  grantExp(p, amount) {
+    const before = p.profile.level;
+    const levels = addExp(p.profile, amount);
+    p.profileDirty = true;
     if (levels) {
-      killer.stats = playerStats(killer.profile);
-      killer.hp = killer.stats.maxHp;
-      killer.dirty = true;
-      this.broadcast({ t: 'lvl', id: killer.id, lvl: killer.profile.level, maxHp: killer.stats.maxHp });
-      killer.send({ t: 'toast', text: `เลเวลอัป! Lv.${before} → Lv.${killer.profile.level}` });
+      p.stats = playerStats(p.profile);
+      p.hp = p.stats.maxHp;
+      p.dirty = true;
+      this.broadcast({ t: 'lvl', id: p.id, lvl: p.profile.level, maxHp: p.stats.maxHp });
+      p.send({ t: 'toast', text: `เลเวลอัป! Lv.${before} → Lv.${p.profile.level}` });
     }
   }
 
@@ -237,7 +253,7 @@ export class GameRoom {
     }
     for (const p of [...this.players.values()]) this.tickPlayer(p, now, dt);
     if (this.players.size) for (const m of this.monsters.values()) this.tickMonster(m, now, dt);
-    this.flush();
+    this.flush(now);
   }
 
   tickPlayer(p, now, dt) {
@@ -339,13 +355,16 @@ export class GameRoom {
     // Prefer whatever is already chewing on us, then the closest monster.
     bestD = Infinity;
     for (const m of this.monsters.values()) {
-      const dd = dist(p, m) - (m.aggro === p.id ? 100 : 0);
+      const fighting = m.aggro === p.id;
+      if (!fighting && m.def.level > p.profile.level + BOT_LEVEL_MARGIN) continue;
+      const dd = dist(p, m) - (fighting ? 100 : 0);
       if (dist(p, m) < BOT_SEARCH_RANGE && dd < bestD) [best, bestD] = [m, dd];
     }
     if (best) p.target = best.id;
   }
 
   tickMonster(m, now, dt) {
+    if (!m.aggro && m.def.aggroRange) m.aggro = this.nearestVictim(m)?.id ?? null;
     const p = m.aggro ? this.players.get(m.aggro) : null;
     if (m.aggro && (!p || p.dead || dist(m, m.home) > m.def.leash)) {
       m.aggro = null;
@@ -370,6 +389,16 @@ export class GameRoom {
       if (!isBlocked(this.grid, x, y)) this.setPath(m, x, y);
     }
     advance(m, dt);
+  }
+
+  nearestVictim(m) {
+    let best = null;
+    let bestD = m.def.aggroRange;
+    for (const p of this.players.values()) {
+      const d = dist(p, m);
+      if (!p.dead && d <= bestD && dist(p, m.home) <= m.def.leash) [best, bestD] = [p, d];
+    }
+    return best;
   }
 
   monsterAttack(m, p, now) {
@@ -402,7 +431,7 @@ export class GameRoom {
   }
 
   // Send delta snapshot of moved/damaged entities, plus private profile updates.
-  flush() {
+  flush(now) {
     const e = [];
     for (const p of this.players.values()) {
       if (p.dirty) {
@@ -420,7 +449,7 @@ export class GameRoom {
     for (const p of this.players.values()) {
       if (p.profileDirty) {
         p.profileDirty = false;
-        p.send({ t: 'me', me: selfView(p) });
+        p.send({ t: 'me', me: selfView(p, now) });
       }
     }
   }
@@ -434,7 +463,7 @@ export function playerView(p) {
   return {
     id: p.id, k: 'p', name: p.profile.name, x: round2(p.x), y: round2(p.y), dir: p.dir,
     hp: Math.max(0, Math.round(p.hp)), maxHp: p.stats.maxHp, lvl: p.profile.level,
-    look: p.profile.look, body: p.profile.equip.body, weapon: p.profile.equip.weapon,
+    look: p.profile.look, body: p.profile.equip.body, head: p.profile.equip.head, weapon: p.profile.equip.weapon,
     dead: p.dead || undefined,
   };
 }
@@ -450,7 +479,14 @@ export function dropView(d) {
   return { id: d.id, k: 'd', item: d.item, amount: d.amount, x: d.x, y: d.y, owner: d.owner };
 }
 
-export function selfView(p) {
+export function selfView(p, now) {
   const { name, level, exp, coins, inv, equip } = p.profile;
-  return { id: p.id, name, level, exp, coins, inv, equip, stats: p.stats, hp: Math.round(p.hp), auto: p.auto };
+  return {
+    id: p.id, name, level, exp, coins, inv, equip, stats: p.stats, hp: Math.round(p.hp), auto: p.auto,
+    bounty: bountyView(p.profile, now),
+  };
+}
+
+export function bountyTitle(b) {
+  return `ปราบ${MONSTERS[b.type].name} ${b.need} ตัว`;
 }

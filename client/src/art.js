@@ -70,6 +70,19 @@ export const BODY_OVERLAYS = {
   },
 };
 
+// Hats sit on the head, which bobs down one pixel in the walk frame.
+BODY_OVERLAYS.hat_straw = {
+  followsHead: true,
+  palette: { b: '#d9b56e', B: '#8a5a2b', f: '#9aa3ad' },
+  rows: [
+    '.....kkkkkk.f...',
+    '....kbbbbbbkff..',
+    '...kbbbbbbbbkf..',
+    '..kBBBBBBBBBBk..',
+    ...Array(12).fill('................'),
+  ],
+};
+
 // Held weapons (drawn at the character's right hand).
 export const WEAPON_ART = {
   broom: {
@@ -158,6 +171,76 @@ export const RAT_FRAMES = [
   ],
 ];
 
+// นกพิราบแย่งข้าว, side view facing right.
+export const PIGEON_PALETTE = { g: '#6e7682', G: '#aab2bd', i: '#4f9e84', e: '#e84a3a', y: '#e0a040' };
+export const PIGEON_FRAMES = [
+  [
+    ...Array(7).fill('................'),
+    '.........kkk....',
+    '........kgggk...',
+    '........kgegyk..',
+    '...kkkkkkiiik...',
+    '..kGGGGGGGiik...',
+    '.kGGgggggGGGk...',
+    'kGGgggggGGGk....',
+    '.kkkkkkkkkkk....',
+    '......y..y......',
+  ],
+  [
+    ...Array(8).fill('................'),
+    '.........kkk....',
+    '........kgggk...',
+    '...kkkkkkgegyk..',
+    '..kGGGGGGGiik...',
+    '.kGGgggggGGGk...',
+    'kGGgggggGGGk....',
+    '.kkkkkkkkkkk....',
+    '.....y....y.....',
+  ],
+];
+
+// หมาจรจัดประจำซอย, side view facing right.
+export const DOG_PALETTE = { b: '#c8924e', B: '#8a5a2b', e: '#ffffff', p: '#e86a7a' };
+export const DOG_FRAMES = [
+  [
+    ...Array(4).fill('................'),
+    '..........kk....',
+    '.........kbbk...',
+    '.........kbbbk..',
+    '..k......kbebbkk',
+    '..kk.....kbbbbbk',
+    '...kkkkkkkbbbpk.',
+    '...kbbbbbbbbbk..',
+    '...kbBBbbbbBbk..',
+    '...kbbbbbbbbbk..',
+    '...kbkkkkkkkbk..',
+    '...kbk.....kbk..',
+    '...kk......kk...',
+  ],
+  [
+    ...Array(4).fill('................'),
+    '..........kk....',
+    '.........kbbk...',
+    '.........kbbbk..',
+    '.k.......kbebbkk',
+    '..kk.....kbbbbbk',
+    '...kkkkkkkbbbpk.',
+    '...kbbbbbbbbbk..',
+    '...kbBBbbbbBbk..',
+    '...kbbbbbbbbbk..',
+    '...kbkkkkkkkbk..',
+    '..kbk.......kbk.',
+    '..kk.........kk.',
+  ],
+];
+
+// Every monster type's sprite frames, palette and head height (pixels above feet).
+export const MONSTER_ART = {
+  rat: { frames: RAT_FRAMES, palette: RAT_PALETTE, headY: 11 },
+  pigeon: { frames: PIGEON_FRAMES, palette: PIGEON_PALETTE, headY: 9 },
+  dog: { frames: DOG_FRAMES, palette: DOG_PALETTE, headY: 12 },
+};
+
 export const DROP_ART = {
   coin: {
     palette: { y: '#ffd23f', Y: '#c99a1a', w: '#fff8d0' },
@@ -170,6 +253,32 @@ export const DROP_ART = {
       'kyyyyYYk',
       '.kyYYYk.',
       '..kkkk..',
+    ],
+  },
+  feather: {
+    palette: { g: '#aab2bd', G: '#6e7682' },
+    rows: [
+      '......kk',
+      '.....kgk',
+      '....kgGk',
+      '...kgGk.',
+      '..kgGk..',
+      '.kgGk...',
+      '.kkk....',
+      'k.......',
+    ],
+  },
+  bone: {
+    palette: { w: '#f4efe0', W: '#cfc6ad' },
+    rows: [
+      '.kk..kk.',
+      'kwwkkwwk',
+      'kwwwwwwk',
+      '.kwWWWk.',
+      '.kwWWWk.',
+      'kwwwwwwk',
+      'kwwkkwwk',
+      '.kk..kk.',
     ],
   },
   junk: {
