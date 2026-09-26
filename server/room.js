@@ -59,7 +59,10 @@ export class GameRoom {
     this.monsters = new Map();
     this.drops = new Map();
     this.respawns = [];
-    for (const spawn of def.spawns) for (let i = 0; i < spawn.count; i++) this.spawnMonster(spawn);
+    for (const spawn of def.spawns) {
+      if (spawn.scheduled) this.worldBoss = { spawn, nextAt: 0, warned: false, mob: null, leaveAt: 0 };
+      else for (let i = 0; i < spawn.count; i++) this.spawnMonster(spawn);
+    }
   }
 
   // ---------- messaging ----------
@@ -167,7 +170,7 @@ export class GameRoom {
       x: pos.x, y: pos.y, home: { ...pos }, dir: 1,
       hp: def.hp, speed: def.speed, path: [], aggro: null,
       nextAttackAt: 0, idleUntil: 0, repathAt: 0, dirty: false,
-      damageBy: new Map(), waveAt: 0, waveHitAt: 0,
+      damageBy: new Map(), waveAt: 0, waveHitAt: 0, chargeReadyAt: 0, charging: false,
     };
     this.monsters.set(m.id, m);
     this.broadcast({ t: 'join', e: monsterView(m) });
@@ -201,7 +204,8 @@ export class GameRoom {
   killMonster(m, killer, now) {
     this.monsters.delete(m.id);
     this.broadcast({ t: 'die', id: m.id });
-    this.respawns.push({ spawn: m.spawn, at: now + m.def.respawnMs });
+    if (m.spawn.scheduled) this.worldBossGone(now);
+    else this.respawns.push({ spawn: m.spawn, at: now + m.def.respawnMs });
     for (const p of this.players.values()) if (p.target === m.id) p.target = null;
 
     // Bosses reward everyone who pulled their weight; others only the killer.
@@ -220,7 +224,11 @@ export class GameRoom {
         w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
       }
     }
-    if (m.def.boss) this.broadcast({ t: 'sys', text: `🎉 ${winners.map((w) => w.profile.name).join(', ')} ปราบ${m.def.name}สำเร็จ!` });
+    if (m.def.boss) {
+      const text = `🎉 ${winners.map((w) => w.profile.name).join(', ')} ปราบ${m.def.name}สำเร็จ!`;
+      if (m.def.worldBoss) this.world.announce(text);
+      else this.broadcast({ t: 'sys', text });
+    }
   }
 
   grantExp(p, amount) {
@@ -254,7 +262,41 @@ export class GameRoom {
 
   // ---------- simulation ----------
 
+  // World boss timetable: warn every room, spawn, and drive off if not beaten.
+  tickWorldBoss(now) {
+    const wb = this.worldBoss;
+    const timing = this.world.worldBossTiming;
+    const name = MONSTERS[wb.spawn.type].name;
+    if (!wb.nextAt && !wb.mob) wb.nextAt = now + timing.firstMs;
+    if (wb.mob) {
+      if (now < wb.leaveAt || !this.monsters.has(wb.mob.id)) return;
+      this.monsters.delete(wb.mob.id);
+      this.broadcast({ t: 'leave', id: wb.mob.id });
+      for (const p of this.players.values()) if (p.target === wb.mob.id) p.target = null;
+      this.world.announce(`💨 ${name} ขับหนีไปแล้ว! รอบหน้าอีก ${Math.round(timing.everyMs / 60000)} นาที`);
+      this.worldBossGone(now);
+      return;
+    }
+    if (!wb.warned && now >= wb.nextAt - timing.warnMs) {
+      wb.warned = true;
+      this.world.announce(`📢 อีก ${Math.max(1, Math.round((wb.nextAt - now) / 60000))} นาที ${name} จะบุกโกดังร้าง! รวมพลที่${this.def.name}`);
+    }
+    if (now >= wb.nextAt) {
+      wb.mob = this.spawnMonster(wb.spawn);
+      wb.leaveAt = now + timing.stayMs;
+      this.world.announce(`🔊 ${name} บุก${this.def.name}แล้ว! มีเวลา ${Math.round(timing.stayMs / 60000)} นาที`);
+    }
+  }
+
+  worldBossGone(now) {
+    const wb = this.worldBoss;
+    wb.mob = null;
+    wb.warned = false;
+    wb.nextAt = now + this.world.worldBossTiming.everyMs;
+  }
+
   tick(now, dt) {
+    if (this.worldBoss) this.tickWorldBoss(now);
     for (let i = this.respawns.length - 1; i >= 0; i--) {
       if (now >= this.respawns[i].at) {
         this.spawnMonster(this.respawns[i].spawn);
@@ -404,8 +446,18 @@ export class GameRoom {
   tickMonster(m, now, dt) {
     if (!m.aggro && m.def.aggroRange) m.aggro = this.nearestVictim(m)?.id ?? null;
     const p = m.aggro ? this.players.get(m.aggro) : null;
-    if (m.aggro && (!p || p.dead || dist(m, m.home) > m.def.leash)) {
+    const lost = m.aggro && (!p || p.dead || dist(m, m.home) > m.def.leash);
+    // A boss that loses its target turns on the next player nearby instead of resetting.
+    if (lost && m.def.boss && dist(m, m.home) <= m.def.leash) {
+      const next = this.nearestVictim(m, m.def.leash);
+      if (next) {
+        m.aggro = next.id;
+        return advance(m, dt);
+      }
+    }
+    if (lost) {
       m.aggro = null;
+      this.endCharge(m);
       this.setPath(m, m.home.x, m.home.y);
       m.hp = m.def.hp;
       m.damageBy.clear();
@@ -421,6 +473,14 @@ export class GameRoom {
         if (now >= m.nextAttackAt) this.monsterAttack(m, p, now);
       } else if (now >= m.repathAt) {
         m.repathAt = now + 400;
+        const c = m.def.charge;
+        if (c && !m.charging && now >= m.chargeReadyAt && dist(m, p) >= c.minRange) {
+          // Lower the horns and rush in; the next hit lands twice as hard.
+          m.charging = true;
+          m.speed = m.def.speed * c.speedMult;
+          m.chargeReadyAt = now + c.every;
+          this.broadcast({ t: 'fx', id: m.id, fx: 'charge' });
+        }
         const t = tileOf(p);
         this.setPath(m, t.x, t.y);
       }
@@ -434,9 +494,14 @@ export class GameRoom {
     advance(m, dt);
   }
 
-  nearestVictim(m) {
+  endCharge(m) {
+    m.charging = false;
+    m.speed = m.def.speed;
+  }
+
+  nearestVictim(m, range = m.def.aggroRange) {
     let best = null;
-    let bestD = m.def.aggroRange;
+    let bestD = range;
     for (const p of this.players.values()) {
       const d = dist(p, m);
       if (!p.dead && d <= bestD && dist(p, m.home) <= m.def.leash) [best, bestD] = [p, d];
@@ -446,7 +511,9 @@ export class GameRoom {
 
   monsterAttack(m, p, now) {
     m.nextAttackAt = now + 1000 / m.def.aspd;
-    const roll = rollDamage(m.def, p.stats, this.rng);
+    const mult = m.charging ? m.def.charge.dmgMult : 1;
+    this.endCharge(m);
+    const roll = rollDamage({ ...m.def, atk: m.def.atk * mult }, p.stats, this.rng);
     this.broadcast({ t: 'hit', a: m.id, d: p.id, n: roll.n, crit: roll.crit || undefined, miss: roll.miss || undefined, block: roll.block || undefined });
     p.lastCombatAt = now;
     if (!roll.n) return;
@@ -495,7 +562,7 @@ export class GameRoom {
     m.waveAt = now + w.every;
     m.waveHitAt = now + w.windup;
     m.path = [];
-    this.broadcast({ t: 'fx', id: m.id, fx: 'wave', r: w.radius, ms: w.windup });
+    this.broadcast({ t: 'fx', id: m.id, fx: 'wave', r: w.radius, ms: w.windup, label: w.label });
     return true;
   }
 

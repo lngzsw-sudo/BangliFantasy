@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { RECIPES, bountiesFor, bountyDay } from '../shared/constants.js';
+import { BOUNTY_SLOTS, RECIPES, bountiesFor, bountyDay } from '../shared/constants.js';
 import { bountyView, claimBounty, recordKill } from '../server/bounty.js';
 import { dist } from '../server/room.js';
 import { nearestOpen } from '../shared/pathfinding.js';
@@ -65,8 +65,9 @@ test('daily bounties: same for everyone, progress, claim once, reset next day', 
   const t0 = Date.UTC(2026, 8, 26, 3);
   const today = bountiesFor(bountyDay(t0));
   assert.equal(today.length, 4);
-  assert.equal(today.filter((b) => b.zone === 'alley').length, 2);
-  assert.equal(today.filter((b) => b.zone === 'canal').length, 2);
+  for (const [zone, n] of Object.entries(BOUNTY_SLOTS)) {
+    assert.equal(today.filter((b) => b.zone === zone).length, n, zone);
+  }
   assert.equal(new Set(today.map((b) => b.type)).size, 4, 'one bounty per monster type');
   assert.deepEqual(bountiesFor(bountyDay(t0)), today, 'same board for everyone');
 

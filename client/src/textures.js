@@ -31,6 +31,7 @@ const THEMES = {
   market: { wall: '#7a4b3a', mortar: '#5a3328', floor: '#d8c9a8', floorLine: '#c4b28e' },
   alley: { wall: '#5a5d66', mortar: '#44464d', floor: '#a3a7ab', floorLine: '#8d9195' },
   canal: { wall: '#5b4a3a', mortar: '#46382b', floor: '#c9b48a', floorLine: '#b39d72' },
+  suburb: { wall: '#4a4f57', mortar: '#3a3e45', floor: '#b8a27a', floorLine: '#a08a64' },
 };
 
 // Draw one tile variant. `v` picks a noise seed so floors don't look tiled.
@@ -149,6 +150,21 @@ function drawTile(ctx, ch, theme, v) {
       fill('#6e7682', 0, 2, S, 1);
       if (v !== 1) fill(OUTLINE, 5, 6, 6, 5), fill('#ffe8a3', 6, 7, 4, 3);
       break;
+    case 'G':
+      // โกดังสังกะสี: rusty corrugated metal wall.
+      fill('#7a8088');
+      ctx.fillStyle = '#5f656d';
+      for (let x = 1; x < S; x += 3) ctx.fillRect(x, 0, 1, S);
+      speckle(ctx, rnd, ['#a0522d', '#8b4513', '#9aa3ad'], 14);
+      if (v === 2) fill('#3b3f47', 4, 5, 8, 6);
+      break;
+    case 'r':
+      // นาข้าว: rows of rice in water.
+      fill('#8fbf5a');
+      ctx.fillStyle = '#6a9a3e';
+      for (let y = 1; y < S; y += 4) for (let x = (y + v) % 4; x < S; x += 4) ctx.fillRect(x, y, 1, 3);
+      speckle(ctx, rnd, ['#b8d880', '#7fb04a'], 8);
+      break;
     case '~':
       fill('#3a6f8f');
       ctx.fillStyle = '#5b93b3';
@@ -174,7 +190,7 @@ export function tileKey(ch, theme, v) {
 export function makeTextures(scene) {
   const tex = scene.textures;
   for (const theme of Object.keys(THEMES)) {
-    for (const ch of '.,=#ATtBKN~PWsH') {
+    for (const ch of '.,=#ATtBKN~PWsHGr') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
         const c = canvas(TILE, TILE);
         drawTile(c.getContext('2d'), ch, theme, v);

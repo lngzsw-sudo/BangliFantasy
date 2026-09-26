@@ -1,6 +1,6 @@
 import {
   CHAT_COOLDOWN_MS, CHAT_MAX, EMOTES, FASHION_SLOTS, ITEMS, NAME_RE, NPC_RANGE, PLAYER_SPEED, RECIPES, RESPAWN_ROOM, SHOPS,
-  TICK_MS, newProfile, playerStats,
+  TICK_MS, WORLD_BOSS, newProfile, playerStats,
 } from '../shared/constants.js';
 import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
@@ -25,8 +25,9 @@ export function cleanChat(text) {
 
 // Owns every room plus the connected sessions; routes client messages.
 export class World {
-  constructor({ store, rng = Math.random, now = () => Date.now() }) {
+  constructor({ store, rng = Math.random, now = () => Date.now(), worldBoss = {} }) {
     this.store = store;
+    this.worldBossTiming = { ...WORLD_BOSS, ...worldBoss };
     this.rng = rng;
     this.now = now;
     this.rooms = new Map(Object.values(ROOMS).map((def) => [def.id, new GameRoom(def, this, rng)]));
@@ -57,6 +58,11 @@ export class World {
       this.lastSave = now;
       for (const p of this.online.values()) this.save(p);
     }
+  }
+
+  // Server-wide message (world boss timetable etc.): chat log + toast in every room.
+  announce(text) {
+    for (const room of this.rooms.values()) room.broadcast({ t: 'announce', text });
   }
 
   // ---------- sessions ----------

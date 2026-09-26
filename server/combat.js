@@ -1,8 +1,9 @@
 import { CRIT_MULT, MISS_CHANCE, expToNext } from '../shared/constants.js';
 
 // Classic MMO damage roll: ±15% spread, flat defence, 5% miss, crit multiplier.
-export function rollDamage({ atk, crit = 0 }, { def = 0, block = 0 }, rng = Math.random) {
+export function rollDamage({ atk, crit = 0 }, { def = 0, block = 0, evade = 0 }, rng = Math.random) {
   if (rng() < MISS_CHANCE) return { n: 0, miss: true };
+  if (evade && rng() < evade) return { n: 0, miss: true };
   if (block && rng() < block) return { n: 0, block: true };
   const isCrit = rng() < crit;
   let n = atk * (0.85 + rng() * 0.3);

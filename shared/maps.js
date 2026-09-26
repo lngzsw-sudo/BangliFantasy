@@ -17,6 +17,8 @@ export const TILES = {
   'W': { name: 'boardwalk' }, // สะพานไม้
   's': { name: 'shallows' }, // น้ำตื้น เดินลุยได้
   'H': { name: 'stilt house', block: true }, // บ้านริมน้ำ
+  'G': { name: 'warehouse', block: true }, // โกดังสังกะสี
+  'r': { name: 'rice field' }, // นาข้าว
 };
 
 export const ROOMS = {
@@ -108,7 +110,7 @@ export const ROOMS = {
       '#,,,HHHH,,,,,,,,,,,,,HHHH,,,,,,,,,,,,HHHH,,#',
       '#,,,HHHH,,,,,,,,,,,,,HHHH,,,,,,,,,,,,HHHH,,#',
       '#,,,,WW,,,,,,,,,,,,,,,WW,,,,,,,,,,,,,,WW,,,#',
-      'P..........................................#',
+      'P..........................................P',
       '#,,,,WW,,,,,,,,,,,,,,,WW,,,,,,,,,,,,,,WW,,,#',
       '#~~~~WW~~~ssssss~~~~~~WW~~~~~~~~~~~~~~WW~~~#',
       '#~~~~WW~~ssssssss~~~~~WW~~~~ssssss~~~~WWss~#',
@@ -121,6 +123,7 @@ export const ROOMS = {
     ],
     portals: [
       { x: 0, y: 5, w: 1, h: 1, to: 'alley', tx: 38, ty: 3, label: '← ซอยหลังตลาด' },
+      { x: 43, y: 5, w: 1, h: 1, to: 'suburb', tx: 1, ty: 8, label: 'ชานเมือง (Lv 26+) →' },
     ],
     npcs: [],
     objects: [],
@@ -129,6 +132,47 @@ export const ROOMS = {
       { type: 'monitor', count: 6, area: { x1: 2, y1: 12, x2: 34, y2: 13 } },
       // The flood lurks in the lagoon at the east end of the canal.
       { type: 'flood', count: 1, area: { x1: 36, y1: 11, x2: 41, y2: 13 } },
+    ],
+  },
+
+  suburb: {
+    id: 'suburb',
+    name: 'ชานเมือง & โกดังร้าง',
+    subtitle: 'Lv 26–50',
+    safe: false,
+    theme: 'suburb',
+    spawn: { x: 1, y: 8 },
+    tiles: [
+      '##############################################',
+      '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,#',
+      '#,rrrrrrrrrrrrrr.,,t,,,,,,t,,,==GGGGGG==GGGGG#',
+      '#,rrrrrrrrrrrrrr.,,,,,t,,,,,,,==GGGGGG==GGGGG#',
+      '#,rrrrrrrrrrrrrr.,,,,,,,,,,t,,==GGGGGG==GGGGG#',
+      '#,rrrrrrrrrrrrrr.,,,t,,,,,,,,,==GGGGGG==GGGGG#',
+      '#,rrrrrrrrrrrrrr.,,,,,,,t,,,,,===============#',
+      '#,,,,,,,,,,,,,,,.,,,,,,,,,,,,,===============#',
+      'P.............................===============#',
+      '#,,,,,,,,,,,,,,,.,,,,,,,,,,,,,=B=============#',
+      '#,rrrrrrrrrrrrrr.,,,,,,t,,,,,,=========BB=K==#',
+      '#,rrrrrrrrrrrrrr.,,t,,,,,,,,,,===============#',
+      '#,rrrrrrrrrrrrrr.,,,,,,,,,t,,,==GGGGG======B=#',
+      '#,rrrrrrrrrrrrrr.,,,,,,,,,,,t,==GGGGG=B======#',
+      '#,rrrrrrrrrrrrrr.,,,,t,,,,,,,,==GGGGG====K===#',
+      '#,rrrrrrrrrrrrrr.,,,,,,,,t,,,,==GGGGG========#',
+      '#,,,,,,,,,,,,,,,,,,,,,,,,,,,,,===============#',
+      '##############################################',
+    ],
+    portals: [
+      { x: 0, y: 8, w: 1, h: 1, to: 'canal', tx: 42, ty: 5, label: '← ริมคลอง' },
+    ],
+    npcs: [],
+    objects: [],
+    spawns: [
+      { type: 'scarecrow', count: 8, area: { x1: 2, y1: 2, x2: 15, y2: 15 } },
+      { type: 'wasp', count: 9, area: { x1: 17, y1: 1, x2: 29, y2: 16 } },
+      { type: 'buffalo', count: 4, area: { x1: 30, y1: 12, x2: 44, y2: 16 } }, // south yard, clear of the boss arena
+      // The world boss only appears on the WORLD_BOSS timetable.
+      { type: 'sidecar', count: 1, scheduled: true, area: { x1: 33, y1: 7, x2: 43, y2: 10 } },
     ],
   },
 };

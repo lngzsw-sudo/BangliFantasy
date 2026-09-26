@@ -12,9 +12,9 @@ export function mulberry32(seed) {
   };
 }
 
-export function makeWorld(seed = 1) {
+export function makeWorld(seed = 1, options = {}) {
   let clock = 1_000_000;
-  const world = new World({ store: new MemoryStore(), rng: mulberry32(seed), now: () => clock });
+  const world = new World({ store: new MemoryStore(), rng: mulberry32(seed), now: () => clock, ...options });
   world.lastTick = clock;
   const run = (ms) => {
     for (let t = 0; t < ms; t += 100) {

@@ -95,6 +95,32 @@ BODY_OVERLAYS.hat_hyacinth = {
   ],
 };
 
+// Wide-brimmed straw ngob hat.
+BODY_OVERLAYS.hat_scarecrow = {
+  followsHead: true,
+  palette: { y: '#e3c16f', Y: '#b8923f' },
+  rows: [
+    '......kkkk......',
+    '....kkyYyykk....',
+    '..kkyyyYyyyykk..',
+    'kkYYYYYYYYYYYYkk',
+    ...Array(12).fill('................'),
+  ],
+};
+
+// Black racer jacket with festival LED trim.
+BODY_OVERLAYS.jacket_racer = {
+  palette: { j: '#2a2331', J: '#4a3f55', n: '#6dff8a', p: '#f07ab0' },
+  rows: [
+    ...Array(9).fill('................'),
+    '....kjjjjjjk....',
+    '...kjnjjjjpjk...',
+    '..kJjjjjjjjjJk..',
+    '..kkpnpnpnpnkk..',
+    ...Array(3).fill('................'),
+  ],
+};
+
 // Yellow flood-rescue raincoat with a reflective band and hood.
 BODY_OVERLAYS.raincoat = {
   palette: { y: '#ffd23f', Y: '#c99a1a', r: '#f4f1c0' },
@@ -363,6 +389,161 @@ export const FLOOD_FRAMES = [
   ],
 ];
 
+// หุ่นไล่กาสเต็ปเทพ: straw scarecrow on a pole, arms out, mid dance step.
+export const SCARECROW_PALETTE = { y: '#e3c16f', Y: '#b8923f', c: '#d94f4f', w: '#8a5a2b', e: '#1f1a24' };
+export const SCARECROW_FRAMES = [
+  [
+    '......kkkk......',
+    '....kkYYYYkk....',
+    '...kYYYYYYYYk...',
+    '.....kyyyyk.....',
+    '.....kyeyek.....',
+    '.....kyyyyk.....',
+    'kk..kkcccckk..kk',
+    'kykkccccccccckyk',
+    '.kyccwccccwcccyk',
+    '..kkcccccccckkk.',
+    '....kcccccck....',
+    '.....kkwwkk.....',
+    '......kwwk......',
+    '.....kkwwkk.....',
+    '....kyk..kyk....',
+    '....kk....kk....',
+  ],
+  [
+    '.......kkkk.....',
+    '.....kkYYYYkk...',
+    '....kYYYYYYYYk..',
+    '......kyyyyk....',
+    '......kyeyek....',
+    '......kyyyyk....',
+    '.kk..kkcccckk.kk',
+    '.kykkccccccccky.',
+    '..kyccwccccwcck.',
+    '...kkcccccccck..',
+    '.....kcccccck...',
+    '......kkwwkk....',
+    '......kwwk......',
+    '.....kkwwkk.....',
+    '...kyk....kyk...',
+    '...kk......kk...',
+  ],
+];
+
+// ฝูงแตนแตกรัง: three wasps buzzing together.
+export const WASP_PALETTE = { y: '#ffd23f', b: '#1f1a24', w: '#e8f4ff', r: '#ff4455' };
+export const WASP_FRAMES = [
+  [
+    ...Array(4).fill('................'),
+    '..ww......ww....',
+    '.kwwk....kwwk...',
+    'kyybyk..kyybyk..',
+    'kbyybrk.kbyybrk.',
+    '.kkkk....kkkk...',
+    '.....ww.........',
+    '....kwwk........',
+    '...kyybyk.......',
+    '...kbyybrk......',
+    '....kkkk........',
+    '................',
+    '................',
+  ],
+  [
+    ...Array(4).fill('................'),
+    '...ww......ww...',
+    '..kwwk....kwwk..',
+    '.kyybyk..kyybyk.',
+    '.kbyybrk.kbyybrk',
+    '..kkkk....kkkk..',
+    '......ww........',
+    '.....kwwk.......',
+    '....kyybyk......',
+    '....kbyybrk.....',
+    '.....kkkk.......',
+    '................',
+    '................',
+  ],
+];
+
+// ควายเหล็กคลั่ง: riveted iron buffalo with big horns, facing right.
+export const BUFFALO_PALETTE = { i: '#6e7682', I: '#9aa3ad', h: '#e8e0c8', e: '#ff4455', d: '#3b3f47' };
+export const BUFFALO_FRAMES = [
+  [
+    ...Array(3).fill('................'),
+    '..........hh..hh',
+    '..........khkkh.',
+    '.........kIIIIk.',
+    '..kkkkkkkIIeIIk.',
+    '.kIIiiIiiiIIIIk.',
+    'kIiiiiiiiiiiidk.',
+    'kiIiiIiiiIiiik..',
+    'kiiiiiiiiiiiik..',
+    '.kiiiiiiiiiiik..',
+    '.kdk.kdk.kdk.kdk',
+    '.kdk.kdk.kdk.kdk',
+    '.kk..kk..kk..kk.',
+    '................',
+  ],
+  [
+    ...Array(3).fill('................'),
+    '..........hh..hh',
+    '..........khkkh.',
+    '.........kIIIIk.',
+    '..kkkkkkkIIeIIk.',
+    '.kIIiiIiiiIIIIk.',
+    'kIiiiiiiiiiiidk.',
+    'kiIiiIiiiIiiik..',
+    'kiiiiiiiiiiiik..',
+    '.kiiiiiiiiiiik..',
+    'kdk..kdk.kdk..kd',
+    'kdk..kdk.kdk..kd',
+    'kk....kk.kk...kk',
+    '................',
+  ],
+];
+
+// รถพ่วงข้างแต่งซิ่ง: neon sidecar motorbike with a festival speaker stack.
+// Drawn at triple size as the world boss.
+export const SIDECAR_PALETTE = { r: '#e0453a', R: '#9c2b24', s: '#3b3f47', S: '#6e7682', n: '#6dff8a', p: '#f07ab0', w: '#e8e8e8', y: '#ffd23f' };
+export const SIDECAR_FRAMES = [
+  [
+    '..kkkk..........',
+    '.kSSSSk.........',
+    '.kSsSsk....kk...',
+    '.kSSSSk...kyyk..',
+    '.kSsSsk..kkrrk..',
+    '.kSSSSkkkrrrrrk.',
+    'kkkkkkkrrrrrrrrk',
+    'krrrrrrrRRRRRRrk',
+    'krnnnnnrrrrrrrrk',
+    'kRRRRRRRRRRRRRRk',
+    '.kkkkkkkkkkkkkk.',
+    '.kssk....kssk...',
+    'kswwsk..kswwsk..',
+    'kswwsk..kswwsk..',
+    '.kssk....kssk...',
+    '..kk......kk....',
+  ],
+  [
+    '..kkkk..........',
+    '.kSSSSk.........',
+    '.kSsSsk....kk...',
+    '.kSSSSk...kyyk..',
+    '.kSsSsk..kkrrk..',
+    '.kSSSSkkkrrrrrk.',
+    'kkkkkkkrrrrrrrrk',
+    'krrrrrrrRRRRRRrk',
+    'krpppppprrrrrrrk',
+    'kRRRRRRRRRRRRRRk',
+    '.kkkkkkkkkkkkkk.',
+    '.kssk....kssk...',
+    'kswsk...kswsk...',
+    'ksswk...ksswk...',
+    '.kssk....kssk...',
+    '..kk......kk....',
+  ],
+];
+
 // Every monster type's sprite frames, palette, head height (pixels above feet)
 // and optional display scale.
 export const MONSTER_ART = {
@@ -372,6 +553,10 @@ export const MONSTER_ART = {
   hyacinth: { frames: HYACINTH_FRAMES, palette: HYACINTH_PALETTE, headY: 13 },
   monitor: { frames: MONITOR_FRAMES, palette: MONITOR_PALETTE, headY: 8 },
   flood: { frames: FLOOD_FRAMES, palette: FLOOD_PALETTE, headY: 13, scale: 2 },
+  scarecrow: { frames: SCARECROW_FRAMES, palette: SCARECROW_PALETTE, headY: 16 },
+  wasp: { frames: WASP_FRAMES, palette: WASP_PALETTE, headY: 12 },
+  buffalo: { frames: BUFFALO_FRAMES, palette: BUFFALO_PALETTE, headY: 13 },
+  sidecar: { frames: SIDECAR_FRAMES, palette: SIDECAR_PALETTE, headY: 16, scale: 3 },
 };
 
 export const DROP_ART = {
@@ -451,6 +636,58 @@ export const DROP_ART = {
       'kyYyyYyk',
       '.kyyyyk.',
       '..kkkk..',
+    ],
+  },
+  straw: {
+    palette: { y: '#e3c16f', Y: '#b8923f', r: '#d94f4f' },
+    rows: [
+      '.y..y..y',
+      '.yY.yY.y',
+      '..yY.yYy',
+      '...yyYY.',
+      '...rrrr.',
+      '...yYyy.',
+      '..yY.yY.',
+      '.y...y.y',
+    ],
+  },
+  stinger: {
+    palette: { y: '#ffd23f', b: '#1f1a24', r: '#ff4455' },
+    rows: [
+      '......kk',
+      '.....kyk',
+      '....kyyk',
+      '...kbyk.',
+      '..kyyk..',
+      '.kbyk...',
+      'krk.....',
+      'r.......',
+    ],
+  },
+  horn: {
+    palette: { h: '#e8e0c8', H: '#b8ad90' },
+    rows: [
+      'kk......',
+      'khk.....',
+      'khHk....',
+      '.khHk...',
+      '..khHk..',
+      '...khhkk',
+      '....khhk',
+      '.....kk.',
+    ],
+  },
+  speaker: {
+    palette: { s: '#3b3f47', S: '#6e7682', n: '#6dff8a' },
+    rows: [
+      '.kkkkkk.',
+      'kSSSSSSk',
+      'kSksskSk',
+      'kSsnnsSk',
+      'kSsnnsSk',
+      'kSksskSk',
+      'kSSSSSSk',
+      '.kkkkkk.',
     ],
   },
   junk: {

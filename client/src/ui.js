@@ -27,6 +27,11 @@ export class UI {
     net.on('auto', (m) => this.setAuto(m));
     net.on('toast', (m) => this.toast(m.text));
     net.on('sys', (m) => this.log(`<i>${esc(m.text)}</i>`));
+    // Server-wide news (world boss timetable): chat log + toast wherever you are.
+    net.on('announce', (m) => {
+      this.log(`<b class="announce">${esc(m.text)}</b>`);
+      this.toast(m.text);
+    });
     net.on('chat', (m) => this.log(`<b>${esc(m.name)}:</b> ${esc(m.text)}`));
     net.on('mg', (m) => this.minigame.onMessage(m));
     net.on('recovery', (m) => this.showRecoveryCode(m.code));
