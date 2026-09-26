@@ -105,6 +105,18 @@ starts with `blfs_`, so it can share a database with other apps.
   bot runs on the server, so it keeps farming while the tab is in the background.
 - EXP from a monster drops once you out-level it by more than 3, so each area
   eventually stops being worth farming.
+- **👥 Parties** (up to 5 players). The leader invites people by name, or picks
+  someone from the "nearby" list in the 👥 panel, and they accept from a pop-up.
+  Members show with green names and HP bars, and in a list under your
+  character card, including which room they're in.
+  - Kills are shared with members who are alive, in the same room and within
+    12 tiles. The EXP is split evenly plus 20% per extra member (2 players get
+    60% each, 5 get 36% each), and everyone gets the bounty credit.
+  - Members can pick up each other's drops right away.
+  - A party's damage on a boss counts together towards the loot threshold.
+  - Type **/p message** to chat with your party from any room.
+  - Parties aren't saved: logging out leaves the party, and a party with one
+    member left breaks up.
 - **Enter** to chat, **1** to drink a potion, **Esc** to close panels.
 - **NPCs in the market:** ป้าศรี (โอเลี้ยง and ชาเย็น), เฮียเล้ง (weapons: broom, spatula, umbrella)
   and ช่างเจี๊ยบ, who crafts fashion from farmed materials: the **orange
@@ -136,9 +148,9 @@ chance to block a hit.
 
 Added after the MVP: the alley's pigeons and stray dogs, the daily bounty
 board, a hat slot, room 03 (the canal) with its miniboss, and room 04 (the
-suburbs) with the timed world boss.
+suburbs) with the timed world boss, and parties.
 
-Not built yet: room 05, parties, prop/pet slots, and the 1v1 board games.
+Not built yet: room 05, prop/pet slots, and the 1v1 board games.
 
 ## Architecture
 
@@ -162,6 +174,7 @@ server/
   room.js          authoritative room simulation (tick 10 Hz)
   combat.js        damage roll, EXP/level-up, EXP falloff
   bounty.js        daily bounty progress and claims
+  party.js         party invites, membership, party chat and member sync
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)
@@ -207,9 +220,12 @@ outfit combination is turned into a texture the first time it's needed.
 
 Client → server: `hello {mode: login|register|session|recover, name, password?, remember?, session?, code?}`, `logout {session}`, `recovery_new {password}`, `move {x,y}`, `attack {id}`, `chat {text}`,
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
-`equip {item}`, `unequip {slot}`, `mg_open`, `mg_flip {i}`, `mg_close`, `ping`.
+`equip {item}`, `unequip {slot}`, `bounty_claim {id}`, `party_invite {name}`, `party_accept {from}`,
+`party_decline {from}`, `party_leave`, `party_kick {name}`, `mg_open`, `mg_flip {i}`, `mg_close`, `ping`.
+`chat {text, party: true}` goes to your party only.
 
 Server → client: `welcome`, `room` (full room state), `join`/`leave`,
 `s` (delta snapshot `[id, x, y, hp, dir]`), `hit`, `die`, `gone`, `lvl`, `look`,
 `chat`, `emote`, `fx`, `me` (your private profile), `auto`, `toast`, `sys`,
-`announce` (server-wide, e.g. the world boss), `mg`, `error`.
+`announce` (server-wide, e.g. the world boss), `party` (member list, or `null`), `party_invite`,
+`mg`, `error`.

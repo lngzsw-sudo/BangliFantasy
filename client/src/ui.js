@@ -14,6 +14,9 @@ export class UI {
     this.hp = 0;
     this.maxHp = 1;
     this.panel = null; // { kind, npc }
+    this.party = null; // { leader, members: [{ id, name, lvl, hp, maxHp, room, dead }] }
+    this.partyIds = new Set();
+    this.invites = []; // names of players who invited us, newest last
     this.minigame = new Minigame(net, this);
     this.bindHud();
     this.bindChat();
@@ -32,7 +35,16 @@ export class UI {
       this.log(`<b class="announce">${esc(m.text)}</b>`);
       this.toast(m.text);
     });
-    net.on('chat', (m) => this.log(`<b>${esc(m.name)}:</b> ${esc(m.text)}`));
+    net.on('chat', (m) => this.log(m.party
+      ? `<span class="party">[ปาร์ตี้] <b>${esc(m.name)}:</b> ${esc(m.text)}</span>`
+      : `<b>${esc(m.name)}:</b> ${esc(m.text)}`));
+    net.on('party', (m) => this.setParty(m.party));
+    net.on('party_invite', (m) => {
+      this.invites = [...this.invites.filter((n) => n !== m.from), m.from];
+      this.showInvite();
+    });
+    $('#party-invite-yes').onclick = () => this.answerInvite(true);
+    $('#party-invite-no').onclick = () => this.answerInvite(false);
     net.on('mg', (m) => this.minigame.onMessage(m));
     net.on('recovery', (m) => this.showRecoveryCode(m.code));
     $('#recovery-copy').onclick = () => {
@@ -57,6 +69,7 @@ export class UI {
     $('#btn-bag').onclick = () => (this.panel?.kind === 'bag' ? this.closePanel() : this.openPanel({ kind: 'bag' }));
     $('#btn-emote').onclick = () => $('#emotes').classList.toggle('open');
     $('#btn-game').onclick = () => this.openMinigame();
+    $('#btn-party').onclick = () => (this.panel?.kind === 'party' ? this.closePanel() : this.openPanel({ kind: 'party' }));
     $('#btn-travel').onclick = () => (this.panel?.kind === 'travel' ? this.closePanel() : this.openPanel({ kind: 'travel' }));
     $('#panel-close').onclick = () => this.closePanel();
     const emotes = $('#emotes');
@@ -70,7 +83,7 @@ export class UI {
       emotes.append(b);
     }
     window.addEventListener('keydown', (ev) => {
-      if (document.activeElement === $('#chat-input')) return;
+      if (document.activeElement?.tagName === 'INPUT') return; // typing somewhere
       if (ev.key === 'Enter') {
         ev.preventDefault();
         $('#chat-input').focus();
@@ -141,9 +154,12 @@ export class UI {
 
   bindChat() {
     const input = $('#chat-input');
+    // "/p message" goes to the party only.
     const send = () => {
       const v = input.value.trim();
-      if (v) this.net.send('chat', { text: v });
+      const party = /^\/p\s+/i.test(v);
+      const text = party ? v.replace(/^\/p\s+/i, '') : v;
+      if (text) this.net.send('chat', { text, party: party || undefined });
       input.value = '';
     };
     $('#chat-form').onsubmit = (ev) => {
@@ -288,6 +304,8 @@ export class UI {
           this.closePanel();
         };
       });
+    } else if (p.kind === 'party') {
+      this.renderPartyPanel(title, body);
     } else if (p.kind === 'bounty') {
       title.textContent = '📋 กระดานรับงานชุมชน';
       body.innerHTML = `<p class="npc-say">“ช่วยกันกำจัดตัวป่วนในซอยหลังตลาดหน่อย! งานเปลี่ยนทุกเที่ยงคืน”</p>` +
@@ -307,6 +325,91 @@ export class UI {
       body.querySelectorAll('[data-claim]').forEach((b) => {
         b.onclick = () => this.net.send('bounty_claim', { id: b.dataset.claim });
       });
+    }
+  }
+
+  // ---------- party ----------
+
+  setParty(party) {
+    this.party = party;
+    this.partyIds = new Set(party?.members.map((m) => m.id) ?? []);
+    const list = $('#party-list');
+    list.hidden = !party;
+    $('#chat-input').placeholder = party ? 'พิมพ์แชต… (/p = คุยในปาร์ตี้)' : 'พิมพ์แชต… (Enter)';
+    if (party) {
+      const here = this.scene?.room?.id;
+      list.innerHTML = party.members.filter((m) => m.id !== this.me?.id).map((m) => `
+        <div class="pm${m.dead ? ' dead' : ''}">
+          <span class="name">${m.id === party.leader ? '👑' : '👤'} Lv.${m.lvl} ${esc(m.name)}
+            ${m.room !== here ? `<small>· ${esc(ROOMS[m.room]?.name ?? '')}</small>` : ''}</span>
+          <div class="bar"><div style="width:${(100 * m.hp) / m.maxHp}%"></div></div>
+        </div>`).join('');
+    }
+    this.scene?.refreshParty();
+    if (this.panel?.kind === 'party') this.renderPanel();
+  }
+
+  showInvite() {
+    const from = this.invites.at(-1);
+    $('#party-invite').hidden = !from;
+    if (from) $('#party-invite-from').textContent = from;
+  }
+
+  answerInvite(yes) {
+    const from = this.invites.pop();
+    if (from) this.net.send(yes ? 'party_accept' : 'party_decline', { from });
+    if (yes) this.invites = [];
+    this.showInvite();
+  }
+
+  renderPartyPanel(title, body) {
+    const party = this.party;
+    const me = this.me;
+    const lead = !party || party.leader === me.id;
+    title.textContent = '👥 ปาร์ตี้';
+    // HP updates re-render this panel often: keep a half-typed name.
+    const typing = $('#party-invite-name');
+    const draft = typing?.value ?? '';
+    const focused = typing && document.activeElement === typing;
+    const members = party ? party.members.map((m) => `
+      <div class="row">
+        <span class="icon lead">${m.id === party.leader ? '👑' : '👤'}</span>
+        <span class="info"><b>${esc(m.name)}${m.id === me.id ? ' (คุณ)' : ''}</b>
+          <small>Lv.${m.lvl} · HP ${m.hp}/${m.maxHp} · ${esc(ROOMS[m.room]?.name ?? '')}</small></span>
+        ${lead && m.id !== me.id ? `<button class="danger" data-kick="${esc(m.name)}">เชิญออก</button>` : ''}
+      </div>`).join('') : '';
+    const nearby = [...(this.scene?.ents.values() ?? [])]
+      .filter((e) => e.data.k === 'p' && e.data.id !== me.id && !this.partyIds.has(e.data.id))
+      .map((e) => `
+        <div class="row">
+          <span class="icon lead">🙂</span>
+          <span class="info"><b>${esc(e.data.name)}</b><small>Lv.${e.data.lvl}</small></span>
+          <button data-invite="${esc(e.data.name)}">ชวน</button>
+        </div>`).join('');
+    body.innerHTML = `
+      <p class="party-hint">ตีมอนสเตอร์ใกล้ๆ กันแล้ว EXP กับงานกระดานจะนับให้ทุกคน (ได้โบนัสด้วย)
+        เก็บของดรอปของเพื่อนได้ และช่วยกันตีบอสจะนับดาเมจรวมทั้งปาร์ตี้ · พิมพ์ <b>/p ข้อความ</b> เพื่อคุยในปาร์ตี้</p>
+      ${members || '<p class="npc-say">ยังไม่มีปาร์ตี้ — ชวนเพื่อนด้านล่างได้เลย</p>'}
+      ${party ? '<button id="party-leave" type="button" class="danger">ออกจากปาร์ตี้</button>' : ''}
+      ${lead ? `
+        <h3 class="sub">ชวนเพื่อน</h3>
+        <form id="party-invite-form" class="row-form">
+          <input id="party-invite-name" maxlength="16" placeholder="ชื่อตัวละคร" aria-label="ชื่อตัวละครที่จะชวน" autocomplete="off">
+          <button type="submit">ชวน</button>
+        </form>
+        ${nearby ? `<h3 class="sub">คนที่อยู่แถวนี้</h3>${nearby}` : ''}` : '<p class="party-hint">หัวหน้าปาร์ตี้ (👑) เป็นคนชวนสมาชิกเพิ่ม</p>'}`;
+    const invite = (name) => name && this.net.send('party_invite', { name });
+    body.querySelectorAll('[data-invite]').forEach((b) => (b.onclick = () => invite(b.dataset.invite)));
+    body.querySelectorAll('[data-kick]').forEach((b) => (b.onclick = () => this.net.send('party_kick', { name: b.dataset.kick })));
+    if ($('#party-leave')) $('#party-leave').onclick = () => this.net.send('party_leave');
+    if ($('#party-invite-form')) {
+      $('#party-invite-name').value = draft;
+      if (focused) $('#party-invite-name').focus();
+      $('#party-invite-form').onsubmit = (ev) => {
+        ev.preventDefault();
+        invite($('#party-invite-name').value.trim());
+        $('#party-invite-name').value = '';
+      };
     }
   }
 

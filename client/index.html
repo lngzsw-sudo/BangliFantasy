@@ -44,6 +44,7 @@
       <div class="bar hp"><div id="hp-fill"></div><span id="hp-text"></span></div>
       <div class="bar exp"><div id="exp-fill"></div><span id="exp-text"></span></div>
       <div class="wallet">🪙 <b id="coins">0</b> <span class="sep">·</span> 🥫 <b id="junk">0</b></div>
+      <div id="party-list" hidden></div>
     </div>
 
     <div id="room-banner"><b id="room-name"></b><small id="room-sub"></small></div>
@@ -55,6 +56,7 @@
       <button id="btn-potion" title="ดื่มเครื่องดื่มฟื้น HP (ปุ่ม 1)"><span>🧋</span><span class="label">×<b id="potions">0</b></span></button>
       <button id="btn-bag" title="กระเป๋า"><span>🎒</span><span class="label">กระเป๋า</span></button>
       <button id="btn-emote" title="ท่าทาง"><span>😄</span><span class="label">ท่าทาง</span></button>
+      <button id="btn-party" title="ปาร์ตี้"><span>👥</span><span class="label">ปาร์ตี้</span></button>
       <button id="btn-game" title="มินิเกม"><span>🎴</span><span class="label">มินิเกม</span></button>
       <div id="emotes"></div>
     </div>
@@ -68,6 +70,14 @@
     </div>
 
     <div id="toasts"></div>
+
+    <div id="party-invite" role="dialog" aria-live="polite" hidden>
+      <p>👥 <b id="party-invite-from"></b> ชวนเข้าปาร์ตี้</p>
+      <div class="recovery-actions">
+        <button id="party-invite-no" type="button">ไม่เข้า</button>
+        <button id="party-invite-yes" type="button" class="primary">เข้าร่วม ✓</button>
+      </div>
+    </div>
 
     <div id="panel" hidden>
       <header><h2 id="panel-title"></h2><button id="panel-close" aria-label="ปิด">✕</button></header>
