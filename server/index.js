@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
-import { JsonStore } from './store.js';
+import { createStore } from './store.js';
 import { World } from './world.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -63,7 +63,9 @@ const http = createServer((req, res) => {
   createReadStream(file).pipe(res);
 });
 
-const world = new World({ store: new JsonStore(DATA_FILE) });
+const store = await createStore({ databaseUrl: process.env.DATABASE_URL, dataFile: DATA_FILE });
+console.log(`[store] using ${process.env.DATABASE_URL ? 'Postgres (DATABASE_URL)' : `JSON file ${DATA_FILE}`}`);
+const world = new World({ store });
 const wss = new WebSocketServer({ server: http, path: '/ws', maxPayload: 4096 });
 
 wss.on('connection', (ws) => {
@@ -99,10 +101,13 @@ const heartbeat = setInterval(() => {
 world.start();
 http.listen(PORT, () => console.log(`Bang Li Fantasy running at http://localhost:${PORT}`));
 
-function shutdown() {
+async function shutdown() {
   clearInterval(heartbeat);
-  world.stop();
-  process.exit(0);
+  try {
+    await world.stop();
+  } finally {
+    process.exit(0);
+  }
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

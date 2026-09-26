@@ -29,13 +29,19 @@ function makeWorld(seed = 1) {
   return { world, run, now: () => clock };
 }
 
-function join(world, name, token = `token-${name}-0123456789`) {
+// Connects a client and waits until the server has answered the hello.
+async function join(world, name, { password = 'secret123', mode = 'register' } = {}) {
   const inbox = [];
   const client = world.connect((m) => inbox.push(m), () => inbox.push({ t: 'closed' }));
-  client.message({ t: 'hello', name, token });
+  client.message({ t: 'hello', name, password, mode });
+  for (let i = 0; i < 200 && !inbox.some((m) => m.t === 'welcome' || m.t === 'error'); i++) {
+    await new Promise((r) => setTimeout(r, 10));
+  }
   const welcome = inbox.find((m) => m.t === 'welcome');
   return { client, inbox, id: welcome?.id, player: () => [...world.online.values()].find((p) => p.id === welcome?.id) };
 }
+
+const errorText = (c) => c.inbox.find((m) => m.t === 'error')?.text;
 
 test('rollDamage respects miss, block, crit and defence', () => {
   assert.equal(rollDamage({ atk: 10 }, {}, () => 0).miss, true);
@@ -82,25 +88,47 @@ test('cleanChat strips control chars and caps length', () => {
   assert.equal(cleanChat('x'.repeat(500)).length, 80);
 });
 
-test('login spawns in the market; names are owned by their token', () => {
+test('register spawns in the market; names are unique', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'สมชาย');
+  const a = await join(world, 'สมชาย');
   const room = a.inbox.find((m) => m.t === 'room');
   assert.equal(room.room, 'market');
   assert.ok(room.ents.some((e) => e.id === a.id));
 
-  const thief = join(world, 'สมชาย', 'another-token-abcdefgh');
-  assert.equal(thief.id, undefined);
-  assert.match(thief.inbox.find((m) => m.t === 'error').text, /เจ้าของ/);
-
-  const bad = join(world, 'x');
-  assert.equal(bad.id, undefined);
+  const dup = await join(world, 'สมชาย', { password: 'another-pass' });
+  assert.equal(dup.id, undefined);
+  assert.match(errorText(dup), /มีคนใช้แล้ว/);
+  assert.equal((await join(world, 'x')).id, undefined, 'bad name');
+  assert.equal((await join(world, 'Shorty', { password: '123' })).id, undefined, 'short password');
 });
 
-test('chat and emotes reach everyone in the room', () => {
+test('login checks the password and locks out after repeated failures', async () => {
+  const { world } = makeWorld();
+  const a = await join(world, 'Owner', { password: 'correct-horse' });
+  a.client.disconnect();
+  assert.match(errorText(await join(world, 'Nobody', { mode: 'login' })), /ไม่พบ/);
+  for (let i = 0; i < 5; i++) {
+    const bad = await join(world, 'owner', { password: 'wrong-pass', mode: 'login' });
+    assert.match(errorText(bad), /รหัสผ่านไม่ถูกต้อง/);
+  }
+  const locked = await join(world, 'Owner', { password: 'correct-horse', mode: 'login' });
+  assert.match(errorText(locked), /รอ 5 นาที/);
+});
+
+test('logging in again kicks the old session and keeps its latest progress', async () => {
+  const { world } = makeWorld();
+  const a = await join(world, 'Twice');
+  a.player().profile.coins = 555;
+  const b = await join(world, 'twice', { mode: 'login' });
+  assert.ok(a.inbox.some((m) => m.t === 'closed'));
+  assert.equal(b.player().profile.coins, 555);
+  assert.equal(world.online.size, 1);
+});
+
+test('chat and emotes reach everyone in the room', async () => {
   const { world, now } = makeWorld();
-  const a = join(world, 'Alice');
-  const b = join(world, 'Bob');
+  const a = await join(world, 'Alice');
+  const b = await join(world, 'Bob');
   assert.ok(a.inbox.some((m) => m.t === 'join' && m.e.id === b.id));
   a.client.message({ t: 'chat', text: 'ไปกินโอเลี้ยงกัน' });
   a.client.message({ t: 'emote', e: 'wai' });
@@ -112,9 +140,9 @@ test('chat and emotes reach everyone in the room', () => {
   assert.ok(now());
 });
 
-test('walking onto the portal moves the player to the alley and back', () => {
+test('walking onto the portal moves the player to the alley and back', async () => {
   const { world, run } = makeWorld();
-  const a = join(world, 'Walker');
+  const a = await join(world, 'Walker');
   a.client.message({ t: 'move', x: 31, y: 8 });
   run(8000);
   assert.equal(a.player().roomId, 'alley');
@@ -124,18 +152,18 @@ test('walking onto the portal moves the player to the alley and back', () => {
   assert.equal(a.player().roomId, 'market');
 });
 
-test('no fighting in the safe zone', () => {
+test('no fighting in the safe zone', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'Pacifist');
+  const a = await join(world, 'Pacifist');
   a.client.message({ t: 'attack', id: 'm1' });
   a.client.message({ t: 'auto', on: true });
   assert.equal(a.player().auto.on, false);
   assert.ok(a.inbox.some((m) => m.t === 'toast'));
 });
 
-test('click-attack kills a rat, which drops coins that get picked up', () => {
+test('click-attack kills a rat, which drops coins that get picked up', async () => {
   const { world, run } = makeWorld(7);
-  const a = join(world, 'Hunter');
+  const a = await join(world, 'Hunter');
   const p = a.player();
   world.transfer(p, 'alley', 1, 6);
   const alley = world.rooms.get('alley');
@@ -149,9 +177,9 @@ test('click-attack kills a rat, which drops coins that get picked up', () => {
   assert.ok(p.profile.exp > 0 || p.profile.level > 1, 'exp gained');
 });
 
-test('auto-farm hunts rats on its own and drinks potions', () => {
+test('auto-farm hunts rats on its own and drinks potions', async () => {
   const { world, run } = makeWorld(11);
-  const a = join(world, 'Botter');
+  const a = await join(world, 'Botter');
   const p = a.player();
   world.transfer(p, 'alley', 1, 6);
   a.client.message({ t: 'auto', on: true, pct: 90 });
@@ -168,9 +196,9 @@ test('auto-farm hunts rats on its own and drinks potions', () => {
   assert.equal(p.auto.on, false);
 });
 
-test('dying sends you back to the market at half HP', () => {
+test('dying sends you back to the market at half HP', async () => {
   const { world, run } = makeWorld(5);
-  const a = join(world, 'Unlucky');
+  const a = await join(world, 'Unlucky');
   const p = a.player();
   world.transfer(p, 'alley', 1, 6);
   const alley = world.rooms.get('alley');
@@ -181,10 +209,10 @@ test('dying sends you back to the market at half HP', () => {
   assert.ok(p.hp > 0 && p.hp < p.stats.maxHp * 0.6);
 });
 
-test('grind-to-drip: craft the vest at the tailor, it is equipped and broadcast', () => {
+test('grind-to-drip: craft the vest at the tailor, it is equipped and broadcast', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'Fashion');
-  const b = join(world, 'Watcher');
+  const a = await join(world, 'Fashion');
+  const b = await join(world, 'Watcher');
   const p = a.player();
   const recipe = RECIPES.vest_win;
 
@@ -208,9 +236,9 @@ test('grind-to-drip: craft the vest at the tailor, it is equipped and broadcast'
   assert.ok(b.inbox.some((m) => m.t === 'look' && m.id === p.id && m.body === 'vest_win'));
 });
 
-test('buying potions and weapons at the right NPC', () => {
+test('buying potions and weapons at the right NPC', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'Shopper');
+  const a = await join(world, 'Shopper');
   const p = a.player();
   const npc = world.rooms.get('market').def.npcs.find((n) => n.kind === 'cafe');
   p.x = npc.x;
@@ -224,9 +252,9 @@ test('buying potions and weapons at the right NPC', () => {
   assert.equal(p.profile.inv.spatula, undefined, 'too far from the grocery');
 });
 
-test('minigame over the wire pays coins', () => {
+test('minigame over the wire pays coins', async () => {
   const { world } = makeWorld(9);
-  const a = join(world, 'Gamer');
+  const a = await join(world, 'Gamer');
   const p = a.player();
   a.client.message({ t: 'mg_open' });
   const deck = p.mg.deck;
@@ -242,19 +270,19 @@ test('minigame over the wire pays coins', () => {
   assert.equal(p.mg, null);
 });
 
-test('progress is saved on disconnect and restored on login', () => {
+test('progress is saved on disconnect and restored on login', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'Saver');
+  const a = await join(world, 'Saver');
   a.player().profile.coins = 777;
   a.client.disconnect();
   assert.equal(world.online.size, 0);
-  const again = join(world, 'Saver');
+  const again = await join(world, 'Saver', { mode: 'login' });
   assert.equal(again.player().profile.coins, 777);
 });
 
-test('garbage messages are ignored', () => {
+test('garbage messages are ignored', async () => {
   const { world } = makeWorld();
-  const a = join(world, 'Fuzzer');
+  const a = await join(world, 'Fuzzer');
   for (const msg of [null, 1, {}, { t: 'constructor' }, { t: 'move', x: 'a' }, { t: 'equip', item: '__proto__' }, { t: 'buy', npc: 'cafe', item: 'toString' }]) {
     a.client.message(msg);
   }

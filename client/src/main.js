@@ -1,23 +1,9 @@
-import { NAME_RE } from '/shared/constants.js';
+import { NAME_RE, PASSWORD_MAX, PASSWORD_MIN } from '/shared/constants.js';
 import { Net } from './net.js';
 import { UI } from './ui.js';
 import { WorldScene } from './WorldScene.js';
 
 const $ = (sel) => document.querySelector(sel);
-
-function token() {
-  try {
-    let t = localStorage.getItem('bangli.token');
-    if (!t) {
-      t = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, '0')).join('');
-      localStorage.setItem('bangli.token', t);
-    }
-    return t;
-  } catch {
-    // Private mode etc.: a per-tab identity still lets you play.
-    return (window.__bangliToken ??= crypto.randomUUID().replace(/-/g, ''));
-  }
-}
 
 const net = new Net();
 const ui = new UI(net);
@@ -41,32 +27,58 @@ fontsReady.then(() => {
 
 const form = $('#login-form');
 const nameInput = $('#login-name');
+const passInput = $('#login-pass');
+const submit = $('#login-submit');
 const err = $('#login-error');
+let savedName = '';
 try {
-  nameInput.value = localStorage.getItem('bangli.name') ?? '';
+  savedName = localStorage.getItem('bangli.name') ?? '';
 } catch {}
+nameInput.value = savedName;
+
+// Returning players land on "log in", newcomers on "register".
+let mode = savedName ? 'login' : 'register';
+function setMode(m) {
+  mode = m;
+  for (const b of form.querySelectorAll('[data-mode]')) b.setAttribute('aria-selected', b.dataset.mode === m);
+  passInput.autocomplete = m === 'register' ? 'new-password' : 'current-password';
+  submit.textContent = m === 'register' ? 'สร้างตัวละคร 🛵' : 'เข้าตลาด 🛵';
+  $('#login-hint').textContent = m === 'register'
+    ? `ตั้งชื่อตัวละครกับรหัสผ่าน (${PASSWORD_MIN} ตัวขึ้นไป) — ใช้ล็อกอินจากเครื่องไหนก็ได้`
+    : 'ยังไม่มีตัวละคร? กด "สมัครใหม่"';
+  err.textContent = '';
+}
+for (const b of form.querySelectorAll('[data-mode]')) b.onclick = () => setMode(b.dataset.mode);
+setMode(mode);
 
 let loggedIn = false;
 form.onsubmit = async (ev) => {
   ev.preventDefault();
   const name = nameInput.value.trim();
+  const password = passInput.value;
   if (!NAME_RE.test(name)) {
     err.textContent = 'ชื่อต้องยาว 2–16 ตัว ใช้ไทย/อังกฤษ/ตัวเลข/_ (ไม่มีเว้นวรรค)';
     return;
   }
+  if (password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+    err.textContent = `รหัสผ่านต้องยาว ${PASSWORD_MIN}–${PASSWORD_MAX} ตัว`;
+    return;
+  }
   err.textContent = '';
-  form.querySelector('button').disabled = true;
+  submit.disabled = true;
   await sceneReady;
   net.handlers.delete('open');
-  net.on('open', () => net.send('hello', { name, token: token() }));
+  net.on('open', () => net.send('hello', { name, password, mode }));
   net.connect();
-  try {
-    localStorage.setItem('bangli.name', name);
-  } catch {}
 };
 
-net.on('welcome', () => {
+net.on('welcome', (m) => {
   loggedIn = true;
+  passInput.value = '';
+  try {
+    localStorage.setItem('bangli.name', m.me.name);
+    localStorage.removeItem('bangli.token'); // left over from guest logins
+  } catch {}
   $('#login').hidden = true;
   $('#hud').hidden = false;
 });
@@ -74,7 +86,7 @@ net.on('welcome', () => {
 net.on('error', (m) => {
   if (!loggedIn) {
     err.textContent = m.text;
-    form.querySelector('button').disabled = false;
+    submit.disabled = false;
   } else {
     ui.toast(m.text);
   }
@@ -82,7 +94,7 @@ net.on('error', (m) => {
 
 net.on('close', () => {
   if (!loggedIn) {
-    form.querySelector('button').disabled = false;
+    submit.disabled = false;
     err.textContent ||= 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ ลองใหม่อีกครั้ง';
     return;
   }

@@ -70,6 +70,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 }
 #login h1 small { display: block; font-size: 14px; letter-spacing: 3px; color: var(--muted); margin-top: 4px; }
 #login .tag { color: var(--muted); font-size: 13px; margin: 10px 0 16px; }
+#login .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+#login .tabs button { padding: 8px; font-size: 14px; box-shadow: none; background: #1f1a24; color: var(--muted); }
+#login .tabs button[aria-selected="true"] { background: var(--line); color: var(--text); }
+#login input + input { margin-top: 8px; }
 #login input {
   width: 100%; padding: 12px; font: inherit; font-size: 18px; text-align: center;
   border: 2px solid var(--ink); border-radius: 8px; background: #fff7e8; color: var(--ink);

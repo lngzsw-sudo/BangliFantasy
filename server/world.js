@@ -5,7 +5,8 @@ import {
 import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
 import { GameRoom, dist, newId, selfView } from './room.js';
-import { hashToken, migrateProfile } from './store.js';
+import { LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, hashPassword, verifyPassword } from './auth.js';
+import { migrateProfile } from './store.js';
 
 const SAVE_EVERY_MS = 30000;
 
@@ -25,6 +26,8 @@ export class World {
     this.now = now;
     this.rooms = new Map(Object.values(ROOMS).map((def) => [def.id, new GameRoom(def, this, rng)]));
     this.online = new Map(); // lower-case name -> player
+    this.saving = new Map(); // lower-case name -> pending write
+    this.limiter = new LoginLimiter({ now });
     this.lastTick = now();
     this.lastSave = now();
   }
@@ -35,10 +38,10 @@ export class World {
     this.interval = setInterval(() => this.tick(), TICK_MS);
   }
 
-  stop() {
+  async stop() {
     clearInterval(this.interval);
-    for (const p of this.online.values()) this.save(p);
-    this.store.flush();
+    await Promise.all([...this.online.values()].map((p) => this.save(p)));
+    await this.store.close();
   }
 
   tick(now = this.now()) {
@@ -55,69 +58,98 @@ export class World {
 
   // `send` delivers one message object to this client; `close` ends the socket.
   connect(send, close = () => {}) {
-    const conn = { send, close, player: null };
+    const conn = { send, close, player: null, closed: false, loggingIn: false };
     return {
       message: (msg) => this.handle(conn, msg),
       disconnect: () => this.disconnect(conn),
     };
   }
 
-  login(conn, { name, token }) {
+  // hello { name, password, mode: 'login' | 'register' }
+  async login(conn, { name, password, mode }) {
+    const fail = (text) => conn.send({ t: 'error', text });
     name = String(name ?? '').trim();
-    if (!NAME_RE.test(name)) {
-      return conn.send({ t: 'error', text: 'ชื่อต้องยาว 2–16 ตัว (ไทย/อังกฤษ/ตัวเลข/_)' });
+    if (!NAME_RE.test(name)) return fail('ชื่อต้องยาว 2–16 ตัว (ไทย/อังกฤษ/ตัวเลข/_)');
+    if (typeof password !== 'string' || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+      return fail(`รหัสผ่านต้องยาว ${PASSWORD_MIN}–${PASSWORD_MAX} ตัว`);
     }
-    if (typeof token !== 'string' || token.length < 16 || token.length > 128) {
-      return conn.send({ t: 'error', text: 'token ไม่ถูกต้อง' });
-    }
-    const key = name.toLowerCase();
-    const tokenHash = hashToken(token);
-    if ((this.store.get(key)?.tokenHash ?? tokenHash) !== tokenHash) {
-      return conn.send({ t: 'error', text: 'ชื่อนี้มีเจ้าของแล้ว ลองชื่ออื่นนะ' });
-    }
-    // Same owner logging in again: kick (and save) the old session first.
-    const old = this.online.get(key);
-    if (old) {
-      old.send({ t: 'error', text: 'บัญชีนี้ล็อกอินจากที่อื่น' });
-      old.conn.close();
-      this.disconnect(old.conn);
-    }
-    let rec = this.store.get(key);
-    if (!rec) {
-      rec = { tokenHash, profile: newProfile(name) };
-      this.store.put(rec);
-    }
+    if (conn.loggingIn) return;
+    conn.loggingIn = true;
+    try {
+      const key = name.toLowerCase();
+      if (this.limiter.blocked(key)) return fail('ลองผิดหลายครั้งเกินไป รอ 5 นาทีแล้วลองใหม่');
+      await this.saving.get(key); // a just-closed session may still be writing
+      let rec = await this.store.get(key);
+      if (mode === 'register') {
+        if (rec) return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่นนะ');
+        rec = { key, passHash: await hashPassword(password), profile: newProfile(name) };
+        if (!(await this.store.create(rec))) return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่นนะ');
+      } else {
+        if (!rec) return fail('ไม่พบชื่อนี้ — กด "สมัครใหม่" ก่อนนะ');
+        if (!(await verifyPassword(password, rec.passHash))) {
+          this.limiter.fail(key);
+          return fail('รหัสผ่านไม่ถูกต้อง');
+        }
+      }
+      this.limiter.succeed(key);
+      if (conn.closed) return;
 
+      // Same account logging in again: kick the old session and keep its
+      // in-memory profile, which is newer than anything in the store.
+      const old = this.online.get(key);
+      if (old) {
+        old.send({ t: 'error', text: 'บัญชีนี้ล็อกอินจากที่อื่น' });
+        old.conn.close();
+        rec.profile = old.profile;
+        this.disconnect(old.conn);
+      }
+      this.enter(conn, rec);
+    } finally {
+      conn.loggingIn = false;
+    }
+  }
+
+  enter(conn, rec) {
     const profile = migrateProfile(rec.profile);
     const stats = playerStats(profile);
     const p = {
-      id: newId('p'), conn, send: conn.send, profile, stats,
+      id: newId('p'), conn, send: conn.send, profile, stats, key: rec.key, passHash: rec.passHash,
       hp: profile.hp == null ? stats.maxHp : Math.min(stats.maxHp, Math.max(1, profile.hp)),
       dir: 1, speed: PLAYER_SPEED, path: [], target: null, dead: false,
       auto: { on: false, pct: 40 }, nextAttackAt: 0, lastChatAt: 0, mg: null,
-      tokenHash,
     };
     conn.player = p;
-    this.online.set(key, p);
+    this.online.set(p.key, p);
     p.send({ t: 'welcome', id: p.id, me: selfView(p) });
     const room = this.rooms.get(RESPAWN_ROOM);
     const at = room.scatter(room.def.spawn);
     room.addPlayer(p, at.x, at.y);
-    room.broadcast({ t: 'sys', text: `${name} เข้ามาในตลาด` }, p.id);
+    room.broadcast({ t: 'sys', text: `${profile.name} เข้ามาในตลาด` }, p.id);
   }
 
   disconnect(conn) {
+    conn.closed = true;
     const p = conn.player;
     if (!p) return;
     conn.player = null;
     this.rooms.get(p.roomId)?.removePlayer(p);
     this.save(p);
-    if (this.online.get(p.profile.name.toLowerCase()) === p) this.online.delete(p.profile.name.toLowerCase());
+    if (this.online.get(p.key) === p) this.online.delete(p.key);
   }
 
+  // Writes are chained per account so they land in order.
   save(p) {
     p.profile.hp = p.dead ? null : Math.round(p.hp);
-    this.store.put({ tokenHash: p.tokenHash, profile: p.profile });
+    const rec = { key: p.key, passHash: p.passHash, profile: structuredClone(p.profile) };
+    const prev = this.saving.get(p.key) ?? Promise.resolve();
+    const next = prev
+      .then(() => this.store.save(rec))
+      .catch((err) => console.error(`[store] saving ${p.key} failed:`, err.message))
+      .finally(() => {
+        if (this.saving.get(p.key) === next) this.saving.delete(p.key);
+      });
+    this.saving.set(p.key, next);
+    return next;
   }
 
   // Portal / respawn: leave one room, join another (GDD §4 leave_room/join_room).
@@ -147,7 +179,12 @@ export class World {
     if (!msg || typeof msg !== 'object' || typeof msg.t !== 'string') return;
     if (msg.t === 'ping') return conn.send({ t: 'pong', c: msg.c });
     if (!conn.player) {
-      if (msg.t === 'hello') this.login(conn, msg);
+      if (msg.t === 'hello') {
+        this.login(conn, msg).catch((err) => {
+          console.error('[login]', err);
+          conn.send({ t: 'error', text: 'เซิร์ฟเวอร์มีปัญหา ลองใหม่อีกครั้ง' });
+        });
+      }
       return;
     }
     const p = conn.player;

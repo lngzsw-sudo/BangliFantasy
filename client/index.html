@@ -16,13 +16,18 @@
 
   <!-- Login -->
   <div id="login">
-    <form id="login-form" autocomplete="off">
+    <form id="login-form">
       <h1><span>บางลี่แลนด์</span><small>Bang Li Fantasy</small></h1>
       <p class="tag">ตลาดสด · ตีหนูท่อ · แต่งตัวเท่ · แชตกับเพื่อน</p>
-      <input id="login-name" maxlength="16" placeholder="ตั้งชื่อตัวละคร" aria-label="ชื่อตัวละคร" required>
-      <button type="submit">เข้าตลาด 🛵</button>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" data-mode="login">เข้าสู่ระบบ</button>
+        <button type="button" role="tab" data-mode="register">สมัครใหม่</button>
+      </div>
+      <input id="login-name" name="username" maxlength="16" placeholder="ชื่อตัวละคร" aria-label="ชื่อตัวละคร" autocomplete="username" required>
+      <input id="login-pass" name="password" type="password" maxlength="72" placeholder="รหัสผ่าน" aria-label="รหัสผ่าน" autocomplete="current-password" required>
+      <button type="submit" id="login-submit">เข้าตลาด 🛵</button>
       <p id="login-error" role="alert"></p>
-      <p class="hint">ไม่ต้องสมัคร — ชื่อจะผูกกับเบราว์เซอร์นี้อัตโนมัติ</p>
+      <p class="hint" id="login-hint"></p>
     </form>
   </div>
 
