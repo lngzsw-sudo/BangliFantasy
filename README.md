@@ -159,8 +159,18 @@ clock and a seeded RNG, with no sockets. The room/message design follows
 Colyseus closely, so switching later would be mostly mechanical.
 
 **Accounts and persistence.** Players register a name and password. Passwords
-are hashed with scrypt, and repeated wrong passwords lock the name for five
-minutes. `store.js` has one async interface (`get`/`create`/`save`) with two
+are hashed with scrypt, and repeated wrong passwords or recovery codes lock the
+name for five minutes.
+
+- **Remember me** (on by default): the server issues a random 30-day device
+  token. The browser keeps the token, never the password, and logs in with it
+  automatically; only its SHA-256 is stored (`blfs_sessions`). Logging out from
+  🎒 revokes it.
+- **Forgot password:** registering shows a one-time **recovery code**
+  (`XXXX-XXXX-XXXX`, stored as a scrypt hash). "ลืมรหัสผ่าน?" on the login screen
+  takes name + code + new password, then issues a new code and signs out every
+  remembered device. Accounts made before this feature get a code at their next
+  login, and a new code can be requested in 🎒 with the current password. `store.js` has one async interface (`get`/`create`/`save`) with two
 implementations: `PgStore`, which keeps each account as a row with the
 profile in a JSONB column, and `JsonStore` for local play. Profiles save on
 disconnect and every 30 s, and writes for the same account are queued so they
@@ -172,7 +182,7 @@ outfit combination is turned into a texture the first time it's needed.
 
 ### Protocol (JSON over WebSocket)
 
-Client → server: `hello {name, password, mode: login|register}`, `move {x,y}`, `attack {id}`, `chat {text}`,
+Client → server: `hello {mode: login|register|session|recover, name, password?, remember?, session?, code?}`, `logout {session}`, `recovery_new {password}`, `move {x,y}`, `attack {id}`, `chat {text}`,
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `mg_open`, `mg_flip {i}`, `mg_close`, `ping`.
 

@@ -6,10 +6,14 @@ import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
 import { GameRoom, dist, newId, selfView } from './room.js';
 import { claimBounty } from './bounty.js';
-import { LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, hashPassword, verifyPassword } from './auth.js';
+import {
+  LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
+  newSessionToken, normalizeRecoveryCode, verifyPassword,
+} from './auth.js';
 import { migrateProfile } from './store.js';
 
 const SAVE_EVERY_MS = 30000;
+const DAY_MS = 24 * 3600 * 1000;
 
 export function cleanChat(text) {
   return String(text ?? '')
@@ -66,12 +70,17 @@ export class World {
     };
   }
 
-  // hello { name, password, mode: 'login' | 'register' }
-  async login(conn, { name, password, mode }) {
-    const fail = (text) => conn.send({ t: 'error', text });
-    name = String(name ?? '').trim();
+  // hello, one of:
+  //   { mode: 'login' | 'register', name, password, remember }
+  //   { mode: 'session', name, session }            (remembered device)
+  //   { mode: 'recover', name, code, password, remember }
+  async login(conn, msg) {
+    const fail = (text, code) => conn.send({ t: 'error', text, code });
+    const { mode } = msg;
+    const name = String(msg.name ?? '').trim();
     if (!NAME_RE.test(name)) return fail('ชื่อต้องยาว 2–16 ตัว (ไทย/อังกฤษ/ตัวเลข/_)');
-    if (typeof password !== 'string' || password.length < PASSWORD_MIN || password.length > PASSWORD_MAX) {
+    const password = msg.password;
+    if (mode !== 'session' && !(typeof password === 'string' && password.length >= PASSWORD_MIN && password.length <= PASSWORD_MAX)) {
       return fail(`รหัสผ่านต้องยาว ${PASSWORD_MIN}–${PASSWORD_MAX} ตัว`);
     }
     if (conn.loggingIn) return;
@@ -81,10 +90,37 @@ export class World {
       if (this.limiter.blocked(key)) return fail('ลองผิดหลายครั้งเกินไป รอ 5 นาทีแล้วลองใหม่');
       await this.saving.get(key); // a just-closed session may still be writing
       let rec = await this.store.get(key);
+      let recoveryCode = null;
+      let session = null;
+
       if (mode === 'register') {
         if (rec) return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่นนะ');
-        rec = { key, passHash: await hashPassword(password), profile: newProfile(name) };
+        recoveryCode = newRecoveryCode();
+        rec = {
+          key, passHash: await hashPassword(password),
+          recoveryHash: await hashPassword(normalizeRecoveryCode(recoveryCode)), profile: newProfile(name),
+        };
         if (!(await this.store.create(rec))) return fail('ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่นนะ');
+      } else if (mode === 'session') {
+        const s = typeof msg.session === 'string' ? await this.store.getSession(hashSessionToken(msg.session)) : null;
+        if (!s || s.key !== key || !rec || s.expiresAt <= this.now()) {
+          if (s && s.key === key) await this.store.deleteSession(s.hash);
+          return fail('การจดจำเครื่องนี้หมดอายุ กรุณาเข้าสู่ระบบใหม่', 'session');
+        }
+        session = msg.session;
+      } else if (mode === 'recover') {
+        const ok = rec?.recoveryHash && (await verifyPassword(normalizeRecoveryCode(msg.code), rec.recoveryHash));
+        if (!ok) {
+          this.limiter.fail(key);
+          return fail('ชื่อหรือรหัสกู้คืนไม่ถูกต้อง');
+        }
+        // New password, fresh recovery code (the old one is used up), and every
+        // remembered device is logged out.
+        recoveryCode = newRecoveryCode();
+        rec.passHash = await hashPassword(password);
+        rec.recoveryHash = await hashPassword(normalizeRecoveryCode(recoveryCode));
+        await this.store.deleteSessionsFor(key);
+        await this.store.save(rec);
       } else {
         if (!rec) return fail('ไม่พบชื่อนี้ — กด "สมัครใหม่" ก่อนนะ');
         if (!(await verifyPassword(password, rec.passHash))) {
@@ -93,6 +129,16 @@ export class World {
         }
       }
       this.limiter.succeed(key);
+
+      // Accounts made before recovery codes existed get one now.
+      if (!rec.recoveryHash) {
+        recoveryCode = newRecoveryCode();
+        rec.recoveryHash = await hashPassword(normalizeRecoveryCode(recoveryCode));
+      }
+      if (msg.remember && !session) {
+        session = newSessionToken();
+        await this.store.createSession({ hash: hashSessionToken(session), key, expiresAt: this.now() + SESSION_DAYS * DAY_MS });
+      }
       if (conn.closed) return;
 
       // Same account logging in again: kick the old session and keep its
@@ -102,30 +148,37 @@ export class World {
         old.send({ t: 'error', text: 'บัญชีนี้ล็อกอินจากที่อื่น' });
         old.conn.close();
         rec.profile = old.profile;
+        Object.assign(old, { passHash: rec.passHash, recoveryHash: rec.recoveryHash });
         this.disconnect(old.conn);
       }
-      this.enter(conn, rec);
+      const p = this.enter(conn, rec, { recoveryCode, session });
+      if (recoveryCode) this.save(p); // make sure a freshly shown code is stored
     } finally {
       conn.loggingIn = false;
     }
   }
 
-  enter(conn, rec) {
+  enter(conn, rec, { recoveryCode = null, session = null } = {}) {
     const profile = migrateProfile(rec.profile);
     const stats = playerStats(profile);
     const p = {
-      id: newId('p'), conn, send: conn.send, profile, stats, key: rec.key, passHash: rec.passHash,
+      id: newId('p'), conn, send: conn.send, profile, stats,
+      key: rec.key, passHash: rec.passHash, recoveryHash: rec.recoveryHash,
       hp: profile.hp == null ? stats.maxHp : Math.min(stats.maxHp, Math.max(1, profile.hp)),
       dir: 1, speed: PLAYER_SPEED, path: [], target: null, dead: false,
       auto: { on: false, pct: 40 }, nextAttackAt: 0, lastChatAt: 0, mg: null,
     };
     conn.player = p;
     this.online.set(p.key, p);
-    p.send({ t: 'welcome', id: p.id, me: selfView(p, this.now()) });
+    p.send({
+      t: 'welcome', id: p.id, me: selfView(p, this.now()),
+      recoveryCode: recoveryCode ?? undefined, session: session ?? undefined,
+    });
     const room = this.rooms.get(RESPAWN_ROOM);
     const at = room.scatter(room.def.spawn);
     room.addPlayer(p, at.x, at.y);
     room.broadcast({ t: 'sys', text: `${profile.name} เข้ามาในตลาด` }, p.id);
+    return p;
   }
 
   disconnect(conn) {
@@ -141,7 +194,7 @@ export class World {
   // Writes are chained per account so they land in order.
   save(p) {
     p.profile.hp = p.dead ? null : Math.round(p.hp);
-    const rec = { key: p.key, passHash: p.passHash, profile: structuredClone(p.profile) };
+    const rec = { key: p.key, passHash: p.passHash, recoveryHash: p.recoveryHash, profile: structuredClone(p.profile) };
     const prev = this.saving.get(p.key) ?? Promise.resolve();
     const next = prev
       .then(() => this.store.save(rec))
@@ -191,7 +244,9 @@ export class World {
     const p = conn.player;
     const room = this.rooms.get(p.roomId);
     const now = this.now();
-    if (Object.hasOwn(HANDLERS, msg.t)) HANDLERS[msg.t].call(this, p, room, msg, now);
+    if (!Object.hasOwn(HANDLERS, msg.t)) return;
+    const result = HANDLERS[msg.t].call(this, p, room, msg, now);
+    result?.catch?.((err) => console.error(`[${msg.t}]`, err));
   }
 
   refresh(p) {
@@ -329,6 +384,24 @@ const HANDLERS = {
     p.profile.coins += res.bounty.coins;
     room.grantExp(p, res.bounty.exp);
     p.send({ t: 'toast', text: `รับรางวัลแล้ว! 🪙 +${res.bounty.coins} · EXP +${res.bounty.exp}` });
+  },
+
+  // Forget this device ("remember me" token), e.g. before switching accounts.
+  async logout(p, room, { session }) {
+    if (typeof session !== 'string') return;
+    const s = await this.store.getSession(hashSessionToken(session));
+    if (s?.key === p.key) await this.store.deleteSession(s.hash);
+  },
+
+  // Replace the recovery code (the player lost it). Needs the current password.
+  async recovery_new(p, room, { password }) {
+    if (typeof password !== 'string' || !(await verifyPassword(password, p.passHash))) {
+      return p.send({ t: 'toast', text: 'รหัสผ่านไม่ถูกต้อง' });
+    }
+    const code = newRecoveryCode();
+    p.recoveryHash = await hashPassword(normalizeRecoveryCode(code));
+    await this.save(p);
+    p.send({ t: 'recovery', code });
   },
 
   mg_open(p) {

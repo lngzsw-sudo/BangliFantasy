@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
@@ -40,8 +40,21 @@ function contract(name, makeStore) {
       const got = await store.get(key);
       assert.equal(got.passHash, rec.passHash);
       assert.deepEqual(got.profile, rec.profile);
-      await store.save({ ...rec, profile: { ...rec.profile, coins: 999 } });
-      assert.equal((await store.get(key)).profile.coins, 999);
+      await store.save({ ...rec, recoveryHash: 'scrypt$cc$dd', profile: { ...rec.profile, coins: 999 } });
+      const saved = await store.get(key);
+      assert.equal(saved.profile.coins, 999);
+      assert.equal(saved.recoveryHash, 'scrypt$cc$dd');
+
+      const hash = `h${key}`;
+      const future = Date.now() + 60_000;
+      await store.createSession({ hash, key, expiresAt: future });
+      assert.equal((await store.getSession(hash)).key, key);
+      await store.deleteSession(hash);
+      assert.equal(await store.getSession(hash), null);
+      await store.createSession({ hash: `${hash}1`, key, expiresAt: future });
+      await store.createSession({ hash: `${hash}2`, key, expiresAt: future });
+      await store.deleteSessionsFor(key);
+      assert.equal(await store.getSession(`${hash}2`), null);
       await store.close();
     });
   });
@@ -53,12 +66,19 @@ const dir = mkdtempSync(join(tmpdir(), 'bangli-'));
 after(() => rmSync(dir, { recursive: true, force: true }));
 contract('JsonStore', () => new JsonStore(join(dir, 'players.json'), { debounceMs: 1 }));
 
-test('JsonStore persists to disk', async () => {
+test('JsonStore persists players and sessions, and reads the old file format', async () => {
   const file = join(dir, 'persist.json');
   const a = new JsonStore(file);
   await a.create({ key: 'somchai', passHash: 'scrypt$aa$bb', profile: newProfile('Somchai') });
+  await a.createSession({ hash: 'abc', key: 'somchai', expiresAt: 1 });
   await a.close();
-  assert.equal((await new JsonStore(file).get('somchai')).profile.name, 'Somchai');
+  const b = new JsonStore(file);
+  assert.equal((await b.get('somchai')).profile.name, 'Somchai');
+  assert.equal((await b.getSession('abc')).key, 'somchai');
+
+  const legacy = join(dir, 'legacy.json');
+  writeFileSync(legacy, JSON.stringify({ mali: { passHash: 'scrypt$aa$bb', profile: newProfile('Mali') } }));
+  assert.equal((await new JsonStore(legacy).get('mali')).profile.name, 'Mali');
 });
 
 test('PgStore only touches blfs_-prefixed tables', async () => {
@@ -69,10 +89,14 @@ test('PgStore only touches blfs_-prefixed tables', async () => {
   await store.get('somchai');
   await store.create(rec);
   await store.save(rec);
+  await store.createSession({ hash: 'h', key: 'somchai', expiresAt: Date.now() });
+  await store.getSession('h');
+  await store.deleteSession('h');
+  await store.deleteSessionsFor('somchai');
   assert.equal(PLAYERS_TABLE, 'blfs_players');
   for (const text of sql) {
-    assert.match(text, /\bblfs_players\b/);
-    assert.doesNotMatch(text, /\b(FROM|INTO)\s+players\b/i);
+    assert.match(text, /\bblfs_(players|sessions)\b/);
+    assert.doesNotMatch(text, /\b(FROM|INTO|UPDATE)\s+(?!blfs_|SET\b)\w+/i);
   }
 });
 

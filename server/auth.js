@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomInt, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 
 const scryptAsync = promisify(scrypt);
@@ -20,6 +20,25 @@ export async function verifyPassword(password, stored) {
   const actual = await scryptAsync(password, Buffer.from(saltHex, 'hex'), expected.length);
   return timingSafeEqual(actual, expected);
 }
+
+// Recovery codes: shown to the player once, stored only as a scrypt hash.
+// No 0/O/1/I/L so they're easy to copy by hand. Format: XXXX-XXXX-XXXX.
+const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+export function newRecoveryCode() {
+  const chars = Array.from({ length: 12 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]);
+  return [0, 4, 8].map((i) => chars.slice(i, i + 4).join('')).join('-');
+}
+
+// Case, spaces and dashes don't matter when typing the code back in.
+export function normalizeRecoveryCode(code) {
+  return String(code ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+// "Remember me" tokens are long random strings; the store keeps only a SHA-256.
+export const SESSION_DAYS = 30;
+export const newSessionToken = () => randomBytes(32).toString('hex');
+export const hashSessionToken = (token) => createHash('sha256').update(String(token)).digest('hex');
 
 // Slows down password guessing: after `max` failures for a name within
 // `windowMs`, further attempts for that name are refused until it expires.

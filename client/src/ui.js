@@ -29,6 +29,14 @@ export class UI {
     net.on('sys', (m) => this.log(`<i>${esc(m.text)}</i>`));
     net.on('chat', (m) => this.log(`<b>${esc(m.name)}:</b> ${esc(m.text)}`));
     net.on('mg', (m) => this.minigame.onMessage(m));
+    net.on('recovery', (m) => this.showRecoveryCode(m.code));
+    $('#recovery-copy').onclick = () => {
+      navigator.clipboard?.writeText($('#recovery-code').textContent).then(
+        () => this.toast('คัดลอกรหัสกู้คืนแล้ว'),
+        () => this.toast('คัดลอกไม่ได้ — จดหรือแคปหน้าจอแทนนะ'),
+      );
+    };
+    $('#recovery-ok').onclick = () => ($('#recovery').hidden = true);
   }
 
   sceneReady(scene) {
@@ -236,12 +244,27 @@ export class UI {
         </div>${coins}
         <label class="bot-cfg">🤖 บอทกินโอเลี้ยงเมื่อ HP ต่ำกว่า <b id="pct-val">${me.auto.pct}%</b>
           <input id="pct" type="range" min="0" max="90" step="5" value="${me.auto.pct}"></label>
-        ${items}`;
+        ${items}
+        <div class="account">
+          <b>🔐 บัญชี</b>
+          <form id="recovery-form" class="row-form">
+            <input id="recovery-pass" type="password" placeholder="รหัสผ่านปัจจุบัน" autocomplete="current-password" aria-label="รหัสผ่านปัจจุบัน">
+            <button type="submit">ขอรหัสกู้คืนใหม่</button>
+          </form>
+          <small>ทำรหัสกู้คืนหาย? ขอรหัสใหม่ได้ รหัสเดิมจะใช้ไม่ได้อีก</small>
+          <button id="btn-logout" type="button" class="danger">ออกจากระบบ</button>
+        </div>`;
       $('#pct').oninput = (ev) => ($('#pct-val').textContent = `${ev.target.value}%`);
       $('#pct').onchange = (ev) => this.net.send('auto', { on: me.auto.on, pct: Number(ev.target.value) });
       body.querySelectorAll('[data-use]').forEach((b) => (b.onclick = () => this.net.send('use', { item: b.dataset.use })));
       body.querySelectorAll('[data-equip]').forEach((b) => (b.onclick = () => this.net.send('equip', { item: b.dataset.equip })));
       body.querySelectorAll('[data-unequip]').forEach((b) => (b.onclick = () => this.net.send('unequip', { slot: b.dataset.unequip })));
+      $('#recovery-form').onsubmit = (ev) => {
+        ev.preventDefault();
+        this.net.send('recovery_new', { password: $('#recovery-pass').value });
+        $('#recovery-pass').value = '';
+      };
+      $('#btn-logout').onclick = () => this.onLogout?.();
     } else if (p.kind === 'travel') {
       const room = this.scene?.room;
       title.textContent = '🗺️ เดินทาง';
@@ -280,6 +303,12 @@ export class UI {
         b.onclick = () => this.net.send('bounty_claim', { id: b.dataset.claim });
       });
     }
+  }
+
+  // Shown once: after registering, resetting a password, or asking for a new code.
+  showRecoveryCode(code) {
+    $('#recovery-code').textContent = code;
+    $('#recovery').hidden = false;
   }
 
   openMinigame() {
