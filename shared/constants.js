@@ -57,11 +57,20 @@ export const ITEMS = {
   broom: { name: WEAPONS.broom.name, icon: '🧹', desc: WEAPONS.broom.desc, slot: 'weapon' },
   spatula: { name: WEAPONS.spatula.name, icon: '🍳', desc: WEAPONS.spatula.desc, slot: 'weapon' },
   umbrella: { name: WEAPONS.umbrella.name, icon: '⛱️', desc: WEAPONS.umbrella.desc, slot: 'weapon' },
+  feather: { name: 'ขนนกพิราบ', icon: '🪶', desc: 'ดรอปจากนกพิราบ — วัตถุดิบหมวก' },
+  bone: { name: 'กระดูกแทะเล่น', icon: '🦴', desc: 'ดรอปจากหมาจร — วัตถุดิบหมวก' },
   vest_win: {
     name: 'เสื้อกั๊กวินมอเตอร์ไซค์', icon: '🦺',
     desc: 'ชุดแฟชั่น: เสื้อกั๊กส้มเบอร์ 69 ใส่แล้วดูมีคิว', slot: 'body',
   },
+  hat_straw: {
+    name: 'หมวกสานเสียบขนนก', icon: '👒',
+    desc: 'หมวกแฟชั่น: หมวกสานแม่ค้า เสียบขนนกพิราบเท่ๆ', slot: 'head',
+  },
 };
+
+// Equipment slots that change how a character looks.
+export const FASHION_SLOTS = ['body', 'head'];
 
 // NPC shops: what each NPC sells for coins.
 export const SHOPS = {
@@ -72,6 +81,7 @@ export const SHOPS = {
 // Grind-to-drip: farmed materials + coins -> fashion.
 export const RECIPES = {
   vest_win: { coins: 50, items: { junk: 5 } },
+  hat_straw: { coins: 80, items: { feather: 6, bone: 2 } },
 };
 
 export const MONSTERS = {
@@ -86,7 +96,67 @@ export const MONSTERS = {
     wanderRadius: 3,
     leash: 9,
   },
+  // Flock: hitting one pigeon makes the others close by join in.
+  pigeon: {
+    name: 'นกพิราบแย่งข้าว',
+    level: 3,
+    hp: 20, atk: 3, def: 0, aspd: 0.8, range: 1.3,
+    speed: 3.2, exp: 6,
+    coins: [1, 4],
+    drops: [{ item: 'feather', chance: 0.5, amount: [1, 2] }],
+    respawnMs: 4000,
+    wanderRadius: 4,
+    leash: 10,
+    flock: 2.5,
+  },
+  // Aggressive: bites anyone who walks too close.
+  dog: {
+    name: 'หมาจรจัดประจำซอย',
+    level: 6,
+    hp: 70, atk: 9, def: 2, aspd: 0.8, range: 1.3,
+    speed: 2.8, exp: 22,
+    coins: [5, 12],
+    drops: [
+      { item: 'junk', chance: 0.5, amount: [1, 3] },
+      { item: 'bone', chance: 0.35, amount: [1, 1] },
+    ],
+    respawnMs: 8000,
+    wanderRadius: 3,
+    leash: 8,
+    aggroRange: 2.5,
+  },
 };
+
+// The auto-farm bot won't start fights with monsters this many levels above you.
+export const BOT_LEVEL_MARGIN = 2;
+
+// Daily Bounty Board (GDD §2 Room 01). Everyone sees the same few bounties
+// each day, picked from this pool by date; progress resets at midnight (Bangkok).
+export const BOUNTY_POOL = [
+  { id: 'rat10', type: 'rat', need: 10, coins: 40, exp: 30 },
+  { id: 'rat25', type: 'rat', need: 25, coins: 90, exp: 70 },
+  { id: 'pigeon8', type: 'pigeon', need: 8, coins: 45, exp: 35 },
+  { id: 'pigeon20', type: 'pigeon', need: 20, coins: 100, exp: 80 },
+  { id: 'dog3', type: 'dog', need: 3, coins: 70, exp: 60 },
+  { id: 'dog8', type: 'dog', need: 8, coins: 160, exp: 140 },
+];
+export const BOUNTIES_PER_DAY = 3;
+const BANGKOK_OFFSET_MS = 7 * 3600 * 1000;
+
+export function bountyDay(now) {
+  return new Date(now + BANGKOK_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+// Deterministic pick for a day: one bounty per monster type.
+export function bountiesFor(day) {
+  let h = 2166136261;
+  for (const ch of day) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  const rnd = () => ((h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0) / 4294967296);
+  const byType = new Map();
+  for (const b of BOUNTY_POOL) byType.set(b.type, [...(byType.get(b.type) ?? []), b]);
+  const picks = [...byType.values()].map((list) => list[Math.floor(rnd() * list.length)]);
+  return picks.slice(0, BOUNTIES_PER_DAY);
+}
 
 export const MINIGAME = {
   pairs: 8,
@@ -124,8 +194,9 @@ export function newProfile(name) {
     coins: 20,
     hp: null, // null = full
     inv: { oliang: 3, broom: 1 },
-    equip: { weapon: 'broom', body: null },
+    equip: { weapon: 'broom', body: null, head: null },
     look: lookFromName(name),
+    bounty: null, // { day, progress: { id: n }, claimed: [id] }
   };
 }
 

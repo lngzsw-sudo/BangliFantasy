@@ -1,10 +1,11 @@
 import {
-  CHAT_COOLDOWN_MS, CHAT_MAX, EMOTES, ITEMS, NAME_RE, NPC_RANGE, PLAYER_SPEED, RECIPES, RESPAWN_ROOM, SHOPS,
+  CHAT_COOLDOWN_MS, CHAT_MAX, EMOTES, FASHION_SLOTS, ITEMS, NAME_RE, NPC_RANGE, PLAYER_SPEED, RECIPES, RESPAWN_ROOM, SHOPS,
   TICK_MS, newProfile, playerStats,
 } from '../shared/constants.js';
 import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
 import { GameRoom, dist, newId, selfView } from './room.js';
+import { claimBounty } from './bounty.js';
 import { LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, hashPassword, verifyPassword } from './auth.js';
 import { migrateProfile } from './store.js';
 
@@ -120,7 +121,7 @@ export class World {
     };
     conn.player = p;
     this.online.set(p.key, p);
-    p.send({ t: 'welcome', id: p.id, me: selfView(p) });
+    p.send({ t: 'welcome', id: p.id, me: selfView(p, this.now()) });
     const room = this.rooms.get(RESPAWN_ROOM);
     const at = room.scatter(room.def.spawn);
     room.addPlayer(p, at.x, at.y);
@@ -208,6 +209,22 @@ export class World {
     }
     return npc;
   }
+
+  nearObject(p, room, kind) {
+    const o = room.def.objects.find((x) => x.kind === kind);
+    if (!o) return null;
+    const center = { x: o.x + (o.w - 1) / 2, y: o.y + (o.h - 1) / 2 };
+    if (dist(p, center) > NPC_RANGE + 0.5) {
+      p.send({ t: 'toast', text: `เดินเข้าไปใกล้${o.name}ก่อนนะ` });
+      return null;
+    }
+    return o;
+  }
+
+  broadcastLook(p, room) {
+    const { body, head, weapon } = p.profile.equip;
+    room.broadcast({ t: 'look', id: p.id, body, head, weapon });
+  }
 }
 
 const int = (v) => (Number.isFinite(v) ? Math.round(v) : null);
@@ -291,14 +308,23 @@ const HANDLERS = {
     if (!def?.slot || !p.profile.inv[item]) return;
     p.profile.equip[def.slot] = item;
     this.refresh(p);
-    room.broadcast({ t: 'look', id: p.id, body: p.profile.equip.body, weapon: p.profile.equip.weapon });
+    this.broadcastLook(p, room);
   },
 
   unequip(p, room, { slot }) {
-    if (slot !== 'body') return;
-    p.profile.equip.body = null;
+    if (!FASHION_SLOTS.includes(slot)) return;
+    p.profile.equip[slot] = null;
     this.refresh(p);
-    room.broadcast({ t: 'look', id: p.id, body: null, weapon: p.profile.equip.weapon });
+    this.broadcastLook(p, room);
+  },
+
+  bounty_claim(p, room, { id }, now) {
+    if (!this.nearObject(p, room, 'bounty')) return;
+    const res = claimBounty(p.profile, id, now);
+    if (res.error) return p.send({ t: 'toast', text: res.error });
+    p.profile.coins += res.bounty.coins;
+    room.grantExp(p, res.bounty.exp);
+    p.send({ t: 'toast', text: `รับรางวัลแล้ว! 🪙 +${res.bounty.coins} · EXP +${res.bounty.exp}` });
   },
 
   mg_open(p) {

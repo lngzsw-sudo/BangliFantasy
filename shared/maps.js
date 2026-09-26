@@ -7,6 +7,7 @@ export const TILES = {
   'T': { name: 'table', block: true },
   't': { name: 'tree', block: true },
   'B': { name: 'crate', block: true }, // ลังโฟม
+  'N': { name: 'notice board', block: true }, // กระดานรับงาน
   'K': { name: 'cart', block: true }, // รถเข็น
   '~': { name: 'water', block: true },
   '.': { name: 'paving' },
@@ -27,7 +28,7 @@ export const ROOMS = {
       '################################',
       '#AAAAAA#AAAAAAAA####AAAAAAAA####',
       '#......#........####........####',
-      '#..............................#',
+      '#.................NN...........#',
       '#..TT..........................#',
       '#..TT......,,,,,,,,,.......KK..#',
       '#..........,.......,...........#',
@@ -50,6 +51,7 @@ export const ROOMS = {
     ],
     objects: [
       { id: 'obj_cafe_table', kind: 'minigame', name: 'โต๊ะหน้าร้านกาแฟ (การ์ดจับคู่)', x: 3, y: 4, w: 2, h: 2 },
+      { id: 'obj_bounty', kind: 'bounty', name: 'กระดานรับงานชุมชน', x: 18, y: 3, w: 2, h: 1 },
     ],
     spawns: [],
   },
@@ -82,7 +84,10 @@ export const ROOMS = {
     npcs: [],
     objects: [],
     spawns: [
-      { type: 'rat', count: 10, area: { x1: 6, y1: 1, x2: 37, y2: 11 } },
+      // Difficulty rises from the market entrance (west) to the far end (east).
+      { type: 'rat', count: 7, area: { x1: 5, y1: 3, x2: 18, y2: 11 } },
+      { type: 'pigeon', count: 7, area: { x1: 12, y1: 1, x2: 28, y2: 8 } },
+      { type: 'dog', count: 3, area: { x1: 26, y1: 3, x2: 37, y2: 11 } },
     ],
   },
 };

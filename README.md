@@ -53,13 +53,29 @@ creates its `players` table on first start.
 ## How to play
 
 - **Tap/click the ground** to walk (server-side A* pathfinding).
-- **Tap a rat** to lock on. You walk into weapon range and trade hits based on ASPD.
-- **🤖 AUTO** (only in the alley) makes the bot find the nearest rat, loot your
-  own drops, and drink โอเลี้ยง below the HP % you set in 🎒. The bot runs on
-  the server, so it keeps farming while the tab is in the background.
+- **Tap a monster** to lock on. You walk into weapon range and trade hits based on ASPD.
+  The alley gets harder from west to east:
+
+  | Monster | Lv | Behaviour | Drops |
+  |---|---|---|---|
+  | หนูท่อลมปราณ | 2 | Fights back only when hit | coins, junk |
+  | นกพิราบแย่งข้าว | 3 | Hit one and the pigeons near it join in | coins, feathers |
+  | หมาจรจัดประจำซอย | 6 | Bites anyone who walks close | coins, junk, bones |
+
+- **🤖 AUTO** (only in the alley) makes the bot hunt the nearest monster, loot
+  your own drops, and drink โอเลี้ยง below the HP % you set in 🎒. It won't
+  start fights more than 2 levels above you, but it fights back if bitten. The
+  bot runs on the server, so it keeps farming while the tab is in the background.
+- EXP from a monster drops once you out-level it by more than 3, so each area
+  eventually stops being worth farming.
 - **Enter** to chat, **1** to drink a potion, **Esc** to close panels.
 - **NPCs in the market:** ป้าศรี (potions), เฮียเล้ง (weapons: broom, spatula, umbrella)
-  and ช่างเจี๊ยบ, who crafts the **orange motorbike-taxi vest** from 5 junk + 50 coins.
+  and ช่างเจี๊ยบ, who crafts fashion from farmed materials: the **orange
+  motorbike-taxi vest** (5 junk + 50 coins) and the **straw hat with a pigeon
+  feather** (6 feathers + 2 bones + 80 coins). Other players see what you wear.
+- **📋 The bounty board** in the market lists three jobs a day (one per
+  monster type), the same for everyone. Kill the monsters, then come back to
+  the board to claim coins and EXP. The board resets at midnight Bangkok time.
 - **The café table** (or the 🎴 button, usable anywhere) opens a close-up
   card-matching minigame that pays coins. The world keeps running underneath it.
 
@@ -77,8 +93,11 @@ The GDD's three basic weapons are in too: the broom hits nearby enemies for 50%
 splash damage, the spatula adds +25% crit chance, and the umbrella has a 30%
 chance to block a hit.
 
-Not built yet (post-MVP): rooms 03–05, the bounty board, more monsters and
-bosses, parties, hat/prop/pet slots, and the 1v1 board games.
+Added after the MVP: the alley's pigeons and stray dogs, the daily bounty
+board, and a hat slot with a craftable straw hat.
+
+Not built yet: rooms 03–05, bosses, parties, prop/pet slots, and the 1v1
+board games.
 
 ## Architecture
 
@@ -100,7 +119,8 @@ server/
   index.js         http static server + WebSocket (ws) on /ws
   world.js         sessions, login, message routing, room transfers
   room.js          authoritative room simulation (tick 10 Hz)
-  combat.js        damage roll, EXP/level-up
+  combat.js        damage roll, EXP/level-up, EXP falloff
+  bounty.js        daily bounty progress and claims
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)

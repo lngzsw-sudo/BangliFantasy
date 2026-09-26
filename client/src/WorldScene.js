@@ -1,11 +1,13 @@
 import { EMOTES, ITEMS, NPC_RANGE, TILE } from '/shared/constants.js';
 import { ROOMS, roomSize, tileAt } from '/shared/maps.js';
+import { MONSTER_ART } from './art.js';
 import { TILE_VARIANTS, characterTexture, makeTextures, tileKey } from './textures.js';
 
 export const FONT = '"Mitr", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
 const DPR = Math.min(2, window.devicePixelRatio || 1);
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
+const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน' };
 
 const text = (scene, x, y, str, style = {}) =>
   scene.add.text(x, y, str, {
@@ -117,7 +119,7 @@ export class WorldScene extends Phaser.Scene {
     }
     for (const o of room.objects) {
       const cx = (o.x + o.w / 2) * T;
-      const icon = text(this, cx, o.y * T - 2, '🎴 เล่นมินิเกม', { fontSize: '12px', color: '#ffe066' }).setOrigin(0.5, 1);
+      const icon = text(this, cx, o.y * T - 2, OBJECT_LABELS[o.kind] ?? o.name, { fontSize: '12px', color: '#ffe066' }).setOrigin(0.5, 1);
       this.tweens.add({ targets: icon, y: icon.y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       this.mapLayer.add(icon);
     }
@@ -169,11 +171,11 @@ export class WorldScene extends Phaser.Scene {
     } else {
       c.add(this.add.image(0, 0, 'shadow').setScale(S));
       if (e.k === 'm') {
-        ent.body = this.add.image(0, 0, 'rat_0').setOrigin(0.5, 1).setScale(S);
+        ent.body = this.add.image(0, 0, `${e.type}_0`).setOrigin(0.5, 1).setScale(S);
         ent.rig.add(ent.body);
-        ent.headY = -11 * S;
+        ent.headY = -(MONSTER_ART[e.type]?.headY ?? 11) * S;
       } else {
-        ent.texKey = characterTexture(this, e.look, e.body);
+        ent.texKey = characterTexture(this, e.look, e.body, e.head);
         ent.body = this.add.image(0, 0, `${ent.texKey}_0`).setOrigin(0.5, 1).setScale(S);
         ent.weapon = this.add.image(4.5 * S, -5 * S, 'shadow').setOrigin(0.5, 0.3).setScale(S);
         ent.rig.add([ent.body, ent.weapon]);
@@ -347,12 +349,11 @@ export class WorldScene extends Phaser.Scene {
     this.tweens.add({ targets: ring, scaleX: 8, scaleY: 8, alpha: 0, duration: 700, onComplete: () => ring.destroy() });
   }
 
-  onLook({ id, body, weapon }) {
+  onLook({ id, body, head, weapon }) {
     const ent = this.ents.get(id);
     if (!ent || ent.data.k !== 'p') return;
-    ent.data.body = body;
-    ent.data.weapon = weapon;
-    ent.texKey = characterTexture(this, ent.data.look, body);
+    Object.assign(ent.data, { body, head, weapon });
+    ent.texKey = characterTexture(this, ent.data.look, body, head);
     ent.body.setTexture(`${ent.texKey}_${ent.frame}`);
     this.setWeapon(ent, weapon);
     this.floatText(id, '✨', '#ffffff', 18);
@@ -463,6 +464,7 @@ export class WorldScene extends Phaser.Scene {
   interact(p) {
     this.pending = null;
     if (p.kind === 'npc') this.ui.openNpc(p.ref);
+    else if (p.ref.kind === 'bounty') this.ui.openPanel({ kind: 'bounty' });
     else this.ui.openMinigame();
   }
 
@@ -496,7 +498,7 @@ export class WorldScene extends Phaser.Scene {
         } else if (!ent.moving) {
           ent.frame = 0;
         }
-        const key = ent.data.k === 'm' ? `rat_${ent.frame}` : `${ent.texKey}_${ent.frame}`;
+        const key = ent.data.k === 'm' ? `${ent.data.type}_${ent.frame}` : `${ent.texKey}_${ent.frame}`;
         if (ent.body.texture.key !== key) ent.body.setTexture(key);
       }
       this.placeEntity(ent);

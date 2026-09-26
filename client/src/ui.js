@@ -1,7 +1,8 @@
-import { EMOTES, ITEMS, RECIPES, SHOPS, WEAPONS, expToNext } from '/shared/constants.js';
+import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, WEAPONS, expToNext } from '/shared/constants.js';
 import { Minigame } from './minigame.js';
 
 const $ = (sel) => document.querySelector(sel);
+const BOUNTY_ICONS = { rat: '🐀', pigeon: '🐦', dog: '🐕' };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // DOM overlay above the canvas: HUD, chat, panels and the close-up minigame.
@@ -214,7 +215,9 @@ export class UI {
         const equipped = item.slot && me.equip[item.slot] === id;
         let action = '';
         if (item.use) action = `<button data-use="${id}">ใช้</button>`;
-        else if (item.slot === 'body') action = equipped ? `<button data-unequip="body">ถอด</button>` : `<button data-equip="${id}">ใส่</button>`;
+        else if (FASHION_SLOTS.includes(item.slot)) {
+          action = equipped ? `<button data-unequip="${item.slot}">ถอด</button>` : `<button data-equip="${id}">ใส่</button>`;
+        }
         else if (item.slot) action = equipped ? '<button disabled>ถืออยู่</button>' : `<button data-equip="${id}">ถือ</button>`;
         return `<div class="row"><span class="icon">${item.icon}</span>
           <span class="info"><b>${esc(item.name)}${item.slot ? '' : ` ×${n}`}</b><small>${esc(item.desc)}</small></span>${action}</div>`;
@@ -232,6 +235,25 @@ export class UI {
       body.querySelectorAll('[data-use]').forEach((b) => (b.onclick = () => this.net.send('use', { item: b.dataset.use })));
       body.querySelectorAll('[data-equip]').forEach((b) => (b.onclick = () => this.net.send('equip', { item: b.dataset.equip })));
       body.querySelectorAll('[data-unequip]').forEach((b) => (b.onclick = () => this.net.send('unequip', { slot: b.dataset.unequip })));
+    } else if (p.kind === 'bounty') {
+      title.textContent = '📋 กระดานรับงานชุมชน';
+      body.innerHTML = `<p class="npc-say">“ช่วยกันกำจัดตัวป่วนในซอยหลังตลาดหน่อย! งานเปลี่ยนทุกเที่ยงคืน”</p>` +
+        me.bounty.list.map((b) => {
+          const m = MONSTERS[b.type];
+          const done = b.have >= b.need;
+          const button = b.claimed ? '<button disabled>รับแล้ว ✓</button>'
+            : `<button data-claim="${b.id}" ${done ? '' : 'disabled'}>รับรางวัล</button>`;
+          return `<div class="row">
+            <span class="icon">${BOUNTY_ICONS[b.type] ?? '🎯'}</span>
+            <span class="info"><b>ปราบ${esc(m.name)} (Lv.${m.level})</b>
+              <span class="progress"><span style="width:${(100 * b.have) / b.need}%"></span><em>${b.have}/${b.need}</em></span>
+              <small>รางวัล 🪙 ${b.coins} · EXP ${b.exp}</small></span>
+            ${button}
+          </div>`;
+        }).join('');
+      body.querySelectorAll('[data-claim]').forEach((b) => {
+        b.onclick = () => this.net.send('bounty_claim', { id: b.dataset.claim });
+      });
     }
   }
 

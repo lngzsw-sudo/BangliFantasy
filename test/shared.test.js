@@ -28,12 +28,15 @@ test('portals sit on portal tiles and lead to walkable, non-portal tiles', () =>
   }
 });
 
-test('spawn, NPC-adjacent tiles and every portal are reachable from spawn', () => {
+test('spawn, NPCs, objects and every portal are reachable from spawn', () => {
   for (const room of Object.values(ROOMS)) {
     const grid = buildBlockedGrid(room);
     const { x, y } = room.spawn;
     assert.equal(isBlocked(grid, x, y), false, `${room.id} spawn blocked`);
     for (const p of room.portals) assert.ok(findPath(grid, x, y, p.x, p.y), `${room.id} → portal ${p.to}`);
+    for (const o of room.objects) {
+      assert.ok(findPath(grid, x, y, o.x + o.w, o.y), `${room.id} → ${o.id}`);
+    }
     for (const npc of room.npcs) {
       const near = nearestOpen(grid, npc.x, npc.y + 1, 1);
       assert.ok(near && findPath(grid, x, y, near.x, near.y), `${room.id} → ${npc.id}`);
