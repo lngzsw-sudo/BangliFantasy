@@ -1,4 +1,5 @@
 import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, WEAPONS, expToNext } from '/shared/constants.js';
+import { ROOMS } from '/shared/maps.js';
 import { Minigame } from './minigame.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -17,7 +18,12 @@ export class UI {
     this.bindHud();
     this.bindChat();
     net.on('me', (m) => this.setMe(m.me));
-    net.on('welcome', (m) => this.setMe(m.me));
+    net.on('welcome', (m) => {
+      this.setMe(m.me);
+      if (m.me.level <= 3) {
+        setTimeout(() => this.toast('มือใหม่? กด 🗺️ เดินทาง เพื่อไปตีมอนสเตอร์ที่ซอยหลังตลาด'), 2500);
+      }
+    });
     net.on('auto', (m) => this.setAuto(m));
     net.on('toast', (m) => this.toast(m.text));
     net.on('sys', (m) => this.log(`<i>${esc(m.text)}</i>`));
@@ -38,6 +44,7 @@ export class UI {
     $('#btn-bag').onclick = () => (this.panel?.kind === 'bag' ? this.closePanel() : this.openPanel({ kind: 'bag' }));
     $('#btn-emote').onclick = () => $('#emotes').classList.toggle('open');
     $('#btn-game').onclick = () => this.openMinigame();
+    $('#btn-travel').onclick = () => (this.panel?.kind === 'travel' ? this.closePanel() : this.openPanel({ kind: 'travel' }));
     $('#panel-close').onclick = () => this.closePanel();
     const emotes = $('#emotes');
     for (const [id, e] of Object.entries(EMOTES)) {
@@ -235,6 +242,24 @@ export class UI {
       body.querySelectorAll('[data-use]').forEach((b) => (b.onclick = () => this.net.send('use', { item: b.dataset.use })));
       body.querySelectorAll('[data-equip]').forEach((b) => (b.onclick = () => this.net.send('equip', { item: b.dataset.equip })));
       body.querySelectorAll('[data-unequip]').forEach((b) => (b.onclick = () => this.net.send('unequip', { slot: b.dataset.unequip })));
+    } else if (p.kind === 'travel') {
+      const room = this.scene?.room;
+      title.textContent = '🗺️ เดินทาง';
+      body.innerHTML = `<p class="npc-say">ตอนนี้อยู่ที่ <b>${esc(room.name)}</b> (${esc(room.subtitle)}) — เลือกทางออก แล้วตัวละครจะเดินไปให้เอง</p>` +
+        room.portals.map((portal, i) => {
+          const to = ROOMS[portal.to];
+          return `<div class="row">
+            <span class="icon">${to.safe ? '🏪' : '⚔️'}</span>
+            <span class="info"><b>${esc(to.name)}</b><small>${esc(to.subtitle)}</small></span>
+            <button data-portal="${i}">ไปเลย</button>
+          </div>`;
+        }).join('');
+      body.querySelectorAll('[data-portal]').forEach((b) => {
+        b.onclick = () => {
+          this.scene.walkToPortal(room.portals[Number(b.dataset.portal)]);
+          this.closePanel();
+        };
+      });
     } else if (p.kind === 'bounty') {
       title.textContent = '📋 กระดานรับงานชุมชน';
       body.innerHTML = `<p class="npc-say">“ช่วยกันกำจัดตัวป่วนในซอยหลังตลาดหน่อย! งานเปลี่ยนทุกเที่ยงคืน”</p>` +
