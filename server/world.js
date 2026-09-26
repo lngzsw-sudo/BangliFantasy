@@ -269,8 +269,12 @@ const HANDLERS = {
   },
 
   use(p, room, { item }, now) {
-    if (item === 'oliang' && !room.usePotion(p, now)) {
-      p.send({ t: 'toast', text: p.profile.inv.oliang > 0 ? 'ยังดื่มไม่ทัน รอแป๊บ' : 'โอเลี้ยงหมด! ซื้อที่ร้านป้าศรี' });
+    // 'potion' = let the server pick the best one (HUD button / hotkey).
+    const pick = item === 'potion' ? null : item;
+    if (pick !== null && !(Object.hasOwn(ITEMS, pick) && ITEMS[pick].heal)) return;
+    if (!room.usePotion(p, now, pick)) {
+      const any = Object.keys(ITEMS).some((id) => ITEMS[id].heal && p.profile.inv[id] > 0);
+      p.send({ t: 'toast', text: any ? 'ยังดื่มไม่ทัน รอแป๊บ' : 'เครื่องดื่มหมด! ซื้อที่ร้านป้าศรี' });
     }
   },
 

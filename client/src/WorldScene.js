@@ -53,7 +53,7 @@ export class WorldScene extends Phaser.Scene {
     net.on('look', (m) => this.onLook(m));
     net.on('chat', (m) => this.showBubble(m.id, m.text));
     net.on('emote', (m) => this.playEmote(m.id, m.e));
-    net.on('fx', (m) => m.fx === 'heal' && this.floatText(m.id, `+${m.n}`, '#6dff8a'));
+    net.on('fx', (m) => this.onFx(m));
     this.ui.sceneReady(this);
   }
 
@@ -171,9 +171,11 @@ export class WorldScene extends Phaser.Scene {
     } else {
       c.add(this.add.image(0, 0, 'shadow').setScale(S));
       if (e.k === 'm') {
-        ent.body = this.add.image(0, 0, `${e.type}_0`).setOrigin(0.5, 1).setScale(S);
+        const art = MONSTER_ART[e.type] ?? {};
+        const scale = art.scale ?? 1;
+        ent.body = this.add.image(0, 0, `${e.type}_0`).setOrigin(0.5, 1).setScale(S * scale);
         ent.rig.add(ent.body);
-        ent.headY = -(MONSTER_ART[e.type]?.headY ?? 11) * S;
+        ent.headY = -(art.headY ?? 11) * S * scale;
       } else {
         ent.texKey = characterTexture(this, e.look, e.body, e.head);
         ent.body = this.add.image(0, 0, `${ent.texKey}_0`).setOrigin(0.5, 1).setScale(S);
@@ -186,7 +188,7 @@ export class WorldScene extends Phaser.Scene {
       ent.hpBar = this.add.graphics();
       c.add(ent.hpBar);
       const isMe = e.id === this.meId;
-      const label = e.k === 'm' ? `${e.name} Lv.${e.lvl}` : `Lv.${e.lvl} ${e.name}`;
+      const label = e.k === 'm' ? `${e.boss ? '👑 ' : ''}${e.name} Lv.${e.lvl}` : `Lv.${e.lvl} ${e.name}`;
       ent.label = text(this, 0, ent.headY - 7, label, {
         fontSize: '11px', color: e.k === 'm' ? '#ffb3b3' : isMe ? '#9ff0ff' : '#ffffff',
       }).setOrigin(0.5, 1);
@@ -232,7 +234,7 @@ export class WorldScene extends Phaser.Scene {
     const { hp, maxHp, k, id } = ent.data;
     const show = id === this.meId || hp < maxHp;
     if (!show || ent.data.dead) return;
-    const w = 14 * this.S;
+    const w = (ent.data.boss ? 28 : 14) * this.S;
     const y = ent.headY - 5;
     g.fillStyle(0x1f1a24, 0.9).fillRect(-w / 2 - 1, y - 1, w + 2, 5);
     const color = k === 'm' ? 0xe0453a : id === this.meId ? 0x4ade80 : 0x60a5fa;
@@ -266,7 +268,7 @@ export class WorldScene extends Phaser.Scene {
 
   // ---------- combat feedback ----------
 
-  onHit({ a, d, n, crit, miss, block }) {
+  onHit({ a, d, n, crit, miss, block, poison, wave }) {
     if (a === this.meId) this.setTarget(d);
     if (!this.fx) return;
     const attacker = this.ents.get(a);
@@ -279,10 +281,12 @@ export class WorldScene extends Phaser.Scene {
     if (miss) return this.floatText(d, 'MISS', '#c8c8c8');
     if (block) return this.floatText(d, 'BLOCK!', '#7cc7ff');
     const mine = d === this.meId;
-    this.floatText(d, crit ? `${n}!` : `${n}`, mine ? '#ff6b6b' : crit ? '#ffb020' : '#fff6a8', crit ? 22 : 16);
+    if (poison) return this.floatText(d, `☠${n}`, '#9be15d', 14);
+    if (wave) this.floatText(d, `🌊${n}`, '#7cc7ff', 22);
+    else this.floatText(d, crit ? `${n}!` : `${n}`, mine ? '#ff6b6b' : crit ? '#ffb020' : '#fff6a8', crit ? 22 : 16);
     if (target.body) {
       target.body.setTintFill(0xffffff);
-      this.time.delayedCall(80, () => target.body?.clearTint());
+      this.time.delayedCall(80, () => this.restoreTint(target));
     }
     if (mine) this.cameras.main.shake(80, 0.003);
   }
@@ -357,6 +361,46 @@ export class WorldScene extends Phaser.Scene {
     ent.body.setTexture(`${ent.texKey}_${ent.frame}`);
     this.setWeapon(ent, weapon);
     this.floatText(id, '✨', '#ffffff', 18);
+  }
+
+  // Status effects and boss telegraphs from the server.
+  onFx({ id, fx, n, ms, r }) {
+    const ent = this.ents.get(id);
+    if (!ent || !this.fx) return;
+    if (fx === 'heal') return this.floatText(id, `+${n}`, '#6dff8a');
+    if (fx === 'slow' || fx === 'poison') {
+      const [color, label] = fx === 'slow' ? [0x7cc7ff, '🌿 ช้าลง'] : [0x9be15d, '☠ ติดพิษ'];
+      this.floatText(id, label, fx === 'slow' ? '#7cc7ff' : '#9be15d', 13);
+      ent.statusTint = color;
+      this.restoreTint(ent);
+      clearTimeout(ent.tintTimer);
+      ent.tintTimer = setTimeout(() => {
+        ent.statusTint = null;
+        this.restoreTint(ent);
+      }, ms);
+    }
+    if (fx === 'wave') {
+      // Growing ring = get out before it fills up.
+      const radius = r * this.T;
+      const ring = this.add.circle(ent.c.x, ent.c.y, radius, 0x5b93b3, 0.12).setStrokeStyle(3, 0x9cc8e0, 0.9);
+      const fill = this.add.circle(ent.c.x, ent.c.y, 1, 0x5b93b3, 0.35);
+      ring.setDepth(ent.c.depth - 1);
+      fill.setDepth(ent.c.depth - 1);
+      this.floatText(id, '🌊 น้ำกำลังทะลัก!', '#9cc8e0', 16);
+      this.tweens.add({
+        targets: fill, radius, duration: ms,
+        onComplete: () => {
+          this.cameras.main.shake(150, 0.006);
+          this.tweens.add({ targets: [ring, fill], alpha: 0, duration: 300, onComplete: () => { ring.destroy(); fill.destroy(); } });
+        },
+      });
+    }
+  }
+
+  restoreTint(ent) {
+    if (!ent.body || ent.data.dead) return;
+    if (ent.statusTint) ent.body.setTint(ent.statusTint);
+    else ent.body.clearTint();
   }
 
   floatText(id, str, color, size = 16) {

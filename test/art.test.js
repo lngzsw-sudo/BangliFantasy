@@ -23,7 +23,7 @@ test('every monster type has sprites', () => {
 test('every wearable item has art', () => {
   for (const [id, item] of Object.entries(ITEMS)) {
     if (FASHION_SLOTS.includes(item.slot)) assert.ok(BODY_OVERLAYS[id], id);
-    if (!item.slot && id !== 'oliang') assert.ok(DROP_ART[id], `${id} can drop, needs ground art`);
+    if (!item.slot && !item.use) assert.ok(DROP_ART[id], `${id} can drop, needs ground art`);
     if (item.slot === 'weapon') assert.ok(WEAPON_ART[id], id);
   }
 });

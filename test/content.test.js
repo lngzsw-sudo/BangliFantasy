@@ -64,8 +64,11 @@ test('auto-farm leaves monsters far above your level alone unless they attack', 
 test('daily bounties: same for everyone, progress, claim once, reset next day', () => {
   const t0 = Date.UTC(2026, 8, 26, 3);
   const today = bountiesFor(bountyDay(t0));
-  assert.equal(today.length, 3);
-  assert.deepEqual(new Set(today.map((b) => b.type)), new Set(['rat', 'pigeon', 'dog']));
+  assert.equal(today.length, 4);
+  assert.equal(today.filter((b) => b.zone === 'alley').length, 2);
+  assert.equal(today.filter((b) => b.zone === 'canal').length, 2);
+  assert.equal(new Set(today.map((b) => b.type)).size, 4, 'one bounty per monster type');
+  assert.deepEqual(bountiesFor(bountyDay(t0)), today, 'same board for everyone');
 
   const profile = { bounty: null };
   const b = today[0];
@@ -86,12 +89,12 @@ test('daily bounties: same for everyone, progress, claim once, reset next day', 
 
 test('killing monsters advances bounties; rewards are claimed at the board', async () => {
   const { world, alley, p, a, now } = await inAlley(5, 'Hunter');
-  const b = bountiesFor(bountyDay(now())).find((x) => x.type === 'rat');
-  const rat = ofType(alley, 'rat')[0];
-  alley.killMonster(rat, p, now());
+  const b = bountiesFor(bountyDay(now())).find((x) => x.zone === 'alley');
+  const victim = ofType(alley, b.type)[0];
+  alley.killMonster(victim, p, now());
   assert.equal(bountyView(p.profile, now()).list.find((x) => x.id === b.id).have, 1);
 
-  for (let i = 1; i < b.need; i++) recordKill(p.profile, 'rat', now());
+  for (let i = 1; i < b.need; i++) recordKill(p.profile, b.type, now());
   const market = world.rooms.get('market');
   world.transfer(p, 'market', 25, 10);
   a.client.message({ t: 'bounty_claim', id: b.id });

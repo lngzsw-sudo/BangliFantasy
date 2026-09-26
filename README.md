@@ -62,19 +62,34 @@ creates its `players` table on first start.
   | นกพิราบแย่งข้าว | 3 | Hit one and the pigeons near it join in | coins, feathers |
   | หมาจรจัดประจำซอย | 6 | Bites anyone who walks close | coins, junk, bones |
 
-- **🤖 AUTO** (only in the alley) makes the bot hunt the nearest monster, loot
-  your own drops, and drink โอเลี้ยง below the HP % you set in 🎒. It won't
+  Walk through the portal at the east end of the alley to reach **ชุมชนริมคลองสองพี่น้อง**
+  (Lv 13–35). It has wooden stilt houses and a boardwalk over the canal, and
+  you can wade through the light-green shallows:
+
+  | Monster | Lv | Behaviour | Drops |
+  |---|---|---|---|
+  | ผักตบชวากลายพันธุ์ | 13 | Floats in the shallows and grabs anyone close; its hits **slow** you for 3 s | coins, hyacinth stems |
+  | ตัวเงินตัวทอง | 17 | Shy until attacked; its bite **poisons** (4 dmg/s for 5 s); drops a lot of coins | coins, scales |
+  | 👑 มวลน้ำท่วม (miniboss) | 24 | Every 7 s it telegraphs a **flood wave** (growing blue ring): step out of the 3-tile radius within 1.2 s or take 25 damage. Respawns every 2 min | coins, rescue badge, stems |
+
+  Everyone who deals at least 10% of the boss's HP gets their own loot and full EXP.
+
+- **🤖 AUTO** (outside the market) makes the bot hunt the nearest monster, loot
+  your own drops, and drink below the HP % you set in 🎒. It picks the drink that
+  best fits the HP you're missing: โอเลี้ยง heals 45, ชาเย็น heals 150. It won't
   start fights more than 2 levels above you, but it fights back if bitten. The
   bot runs on the server, so it keeps farming while the tab is in the background.
 - EXP from a monster drops once you out-level it by more than 3, so each area
   eventually stops being worth farming.
 - **Enter** to chat, **1** to drink a potion, **Esc** to close panels.
-- **NPCs in the market:** ป้าศรี (potions), เฮียเล้ง (weapons: broom, spatula, umbrella)
+- **NPCs in the market:** ป้าศรี (โอเลี้ยง and ชาเย็น), เฮียเล้ง (weapons: broom, spatula, umbrella)
   and ช่างเจี๊ยบ, who crafts fashion from farmed materials: the **orange
   motorbike-taxi vest** (5 junk + 50 coins) and the **straw hat with a pigeon
-  feather** (6 feathers + 2 bones + 80 coins). Other players see what you wear.
-- **📋 The bounty board** in the market lists three jobs a day (one per
-  monster type), the same for everyone. Kill the monsters, then come back to
+  feather** (6 feathers + 2 bones + 80 coins). From the canal: the **woven
+  hyacinth hat** (12 stems + 150 coins) and the **yellow flood-rescue raincoat**
+  (rescue badge + 4 scales + 5 stems + 300 coins). Other players see what you wear.
+- **📋 The bounty board** in the market lists four jobs a day (two for the
+  alley, two for the canal, each for a different monster), the same for everyone. Kill the monsters, then come back to
   the board to claim coins and EXP. The board resets at midnight Bangkok time.
 - **The café table** (or the 🎴 button, usable anywhere) opens a close-up
   card-matching minigame that pays coins. The world keeps running underneath it.
@@ -94,10 +109,10 @@ splash damage, the spatula adds +25% crit chance, and the umbrella has a 30%
 chance to block a hit.
 
 Added after the MVP: the alley's pigeons and stray dogs, the daily bounty
-board, and a hat slot with a craftable straw hat.
+board, a hat slot, and room 03 (the canal) with its miniboss.
 
-Not built yet: rooms 03–05, bosses, parties, prop/pet slots, and the 1v1
-board games.
+Not built yet: rooms 04–05, the world boss, parties, prop/pet slots, and the
+1v1 board games.
 
 ## Architecture
 
