@@ -48,7 +48,8 @@ so without a database every character is lost. Create a free Postgres
 database (for example on [Neon](https://neon.tech) or
 [Supabase](https://supabase.com)), copy its connection string, and add it to
 the Render service as the environment variable `DATABASE_URL`. The server
-creates its `players` table on first start.
+creates its `blfs_players` table on first start. Every table the game creates
+starts with `blfs_`, so it can share a database with other apps.
 
 ## How to play
 

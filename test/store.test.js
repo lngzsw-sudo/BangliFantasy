@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { after, describe, test } from 'node:test';
 import { newProfile } from '../shared/constants.js';
 import { LoginLimiter, hashPassword, verifyPassword } from '../server/auth.js';
-import { JsonStore, MemoryStore, PgStore } from '../server/store.js';
+import { JsonStore, MemoryStore, PLAYERS_TABLE, PgStore } from '../server/store.js';
 
 test('passwords are salted and verified', async () => {
   const a = await hashPassword('hunter22');
@@ -59,6 +59,21 @@ test('JsonStore persists to disk', async () => {
   await a.create({ key: 'somchai', passHash: 'scrypt$aa$bb', profile: newProfile('Somchai') });
   await a.close();
   assert.equal((await new JsonStore(file).get('somchai')).profile.name, 'Somchai');
+});
+
+test('PgStore only touches blfs_-prefixed tables', async () => {
+  const sql = [];
+  const pool = { query: async (text) => (sql.push(text), { rows: [], rowCount: 1 }) };
+  const store = new PgStore(pool);
+  const rec = { key: 'somchai', passHash: 'x', profile: newProfile('Somchai') };
+  await store.get('somchai');
+  await store.create(rec);
+  await store.save(rec);
+  assert.equal(PLAYERS_TABLE, 'blfs_players');
+  for (const text of sql) {
+    assert.match(text, /\bblfs_players\b/);
+    assert.doesNotMatch(text, /\b(FROM|INTO)\s+players\b/i);
+  }
 });
 
 // Runs when a database is available (always in CI; locally set TEST_DATABASE_URL).

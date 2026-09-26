@@ -71,8 +71,13 @@ export class JsonStore extends MemoryStore {
   }
 }
 
+// Every table this game creates starts with blfs_ (Bang Li Fantasy) so it can
+// share a database with other apps without name clashes.
+export const TABLE_PREFIX = 'blfs_';
+export const PLAYERS_TABLE = `${TABLE_PREFIX}players`;
+
 const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS players (
+  CREATE TABLE IF NOT EXISTS ${PLAYERS_TABLE} (
     name_key   TEXT PRIMARY KEY,
     pass_hash  TEXT NOT NULL,
     profile    JSONB NOT NULL,
@@ -101,13 +106,13 @@ export class PgStore {
   }
 
   async get(key) {
-    const { rows } = await this.pool.query('SELECT pass_hash, profile FROM players WHERE name_key = $1', [key]);
+    const { rows } = await this.pool.query(`SELECT pass_hash, profile FROM ${PLAYERS_TABLE} WHERE name_key = $1`, [key]);
     return rows[0] ? { key, passHash: rows[0].pass_hash, profile: rows[0].profile } : null;
   }
 
   async create(rec) {
     const { rowCount } = await this.pool.query(
-      'INSERT INTO players (name_key, pass_hash, profile) VALUES ($1, $2, $3) ON CONFLICT (name_key) DO NOTHING',
+      `INSERT INTO ${PLAYERS_TABLE} (name_key, pass_hash, profile) VALUES ($1, $2, $3) ON CONFLICT (name_key) DO NOTHING`,
       [rec.key, rec.passHash, rec.profile],
     );
     return rowCount === 1;
@@ -115,7 +120,7 @@ export class PgStore {
 
   async save(rec) {
     await this.pool.query(
-      `INSERT INTO players (name_key, pass_hash, profile) VALUES ($1, $2, $3)
+      `INSERT INTO ${PLAYERS_TABLE} (name_key, pass_hash, profile) VALUES ($1, $2, $3)
        ON CONFLICT (name_key) DO UPDATE SET profile = EXCLUDED.profile, pass_hash = EXCLUDED.pass_hash, updated_at = now()`,
       [rec.key, rec.passHash, rec.profile],
     );
