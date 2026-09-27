@@ -1,6 +1,6 @@
 import {
   DROP_LIFETIME_MS, DROP_OWNER_LOCK_MS, MONSTERS, PICKUP_RANGE, POTION_COOLDOWN_MS,
-  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, PLAYER_SPEED, playerStats,
+  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, PARTY, PLAYER_SPEED, playerStats,
 } from '../shared/constants.js';
 import { buildBlockedGrid, portalAt, roomSize, tileAt } from '../shared/maps.js';
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
@@ -209,17 +209,20 @@ export class GameRoom {
     for (const p of this.players.values()) if (p.target === m.id) p.target = null;
 
     // Bosses reward everyone who pulled their weight; others only the killer.
-    const winners = m.def.shareLoot
-      ? [...this.players.values()].filter((p) => (m.damageBy.get(p.id) ?? 0) >= m.def.hp * m.def.shareLoot)
-      : [killer];
-    if (!winners.includes(killer)) winners.push(killer);
+    const winners = m.def.shareLoot ? this.bossWinners(m, killer) : [killer];
     const at = tileOf(m);
     for (const w of winners) {
       this.spawnDrop('coin', randInt(this.rng, m.def.coins), at, w, now);
       for (const d of m.def.drops) {
         if (this.rng() < d.chance) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, w, now);
       }
-      this.grantExp(w, killExp(m.def.exp, m.def.level, w.profile.level));
+    }
+    // Boss winners each get full EXP. Other kills split the EXP (plus a bonus)
+    // and the bounty credit across the killer's party members close by.
+    const earners = m.def.shareLoot ? winners : this.partyNearby(killer, m);
+    const share = m.def.shareLoot ? 1 : (1 + PARTY.bonus * (earners.length - 1)) / earners.length;
+    for (const w of earners) {
+      this.grantExp(w, Math.round(killExp(m.def.exp, m.def.level, w.profile.level) * share));
       for (const b of recordKill(w.profile, m.type, now)) {
         w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
       }
@@ -229,6 +232,26 @@ export class GameRoom {
       if (m.def.worldBoss) this.world.announce(text);
       else this.broadcast({ t: 'sys', text });
     }
+  }
+
+  // Everyone who dealt the boss's shareLoot fraction of its HP. A party's
+  // damage counts together, for members who are alive and close by.
+  bossWinners(m, killer) {
+    const need = m.def.hp * m.def.shareLoot;
+    const dealt = (p) => m.damageBy.get(p.id) ?? 0;
+    const winners = [...this.players.values()].filter((p) => {
+      if (dealt(p) >= need) return true;
+      if (!p.party || p.dead || dist(p, m) > PARTY.range) return false;
+      return p.party.members.reduce((n, q) => n + dealt(q), 0) >= need;
+    });
+    if (!winners.includes(killer)) winners.push(killer);
+    return winners;
+  }
+
+  // `p` plus their party members who are alive, in this room and near `at`.
+  partyNearby(p, at) {
+    if (!p.party) return [p];
+    return p.party.members.filter((q) => q === p || (q.roomId === this.id && !q.dead && dist(q, at) <= PARTY.range));
   }
 
   grantExp(p, amount) {
@@ -256,8 +279,9 @@ export class GameRoom {
     return d;
   }
 
+  // Your own drops, your party's, or anyone's once the owner lock runs out.
   canLoot(p, d, now) {
-    return d.owner === p.id || now >= d.lockUntil;
+    return d.owner === p.id || now >= d.lockUntil || (!!p.party && this.players.get(d.owner)?.party === p.party);
   }
 
   // ---------- simulation ----------

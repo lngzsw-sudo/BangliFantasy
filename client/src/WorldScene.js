@@ -51,7 +51,7 @@ export class WorldScene extends Phaser.Scene {
     net.on('gone', (m) => this.onGone(m));
     net.on('lvl', (m) => this.onLevel(m));
     net.on('look', (m) => this.onLook(m));
-    net.on('chat', (m) => this.showBubble(m.id, m.text));
+    net.on('chat', (m) => !m.party && this.showBubble(m.id, m.text)); // party chat stays in the log
     net.on('emote', (m) => this.playEmote(m.id, m.e));
     net.on('fx', (m) => this.onFx(m));
     this.ui.sceneReady(this);
@@ -196,11 +196,8 @@ export class WorldScene extends Phaser.Scene {
       c.add(ent.rig);
       ent.hpBar = this.add.graphics();
       c.add(ent.hpBar);
-      const isMe = e.id === this.meId;
       const label = e.k === 'm' ? `${e.boss ? '👑 ' : ''}${e.name} Lv.${e.lvl}` : `Lv.${e.lvl} ${e.name}`;
-      ent.label = text(this, 0, ent.headY - 7, label, {
-        fontSize: '11px', color: e.k === 'm' ? '#ffb3b3' : isMe ? '#9ff0ff' : '#ffffff',
-      }).setOrigin(0.5, 1);
+      ent.label = text(this, 0, ent.headY - 7, label, { fontSize: '11px', color: this.labelColor(e) }).setOrigin(0.5, 1);
       c.add(ent.label);
       ent.ring = this.add.ellipse(0, 0, 14 * S, 5 * S).setStrokeStyle(2, 0xff4d4d).setVisible(false);
       c.addAt(ent.ring, 0);
@@ -209,6 +206,21 @@ export class WorldScene extends Phaser.Scene {
       if (e.dead) this.layDown(ent);
     }
     this.placeEntity(ent);
+  }
+
+  labelColor(e) {
+    if (e.k === 'm') return '#ffb3b3';
+    if (e.id === this.meId) return '#9ff0ff';
+    return this.ui.partyIds.has(e.id) ? '#a7f3a0' : '#ffffff';
+  }
+
+  // Party changed: recolour names and show members' HP bars.
+  refreshParty() {
+    for (const ent of this.ents.values()) {
+      if (ent.data.k !== 'p' || !ent.label) continue;
+      ent.label.setColor(this.labelColor(ent.data));
+      this.drawHp(ent);
+    }
   }
 
   setWeapon(ent, weapon) {
@@ -241,12 +253,12 @@ export class WorldScene extends Phaser.Scene {
     if (!g) return;
     g.clear();
     const { hp, maxHp, k, id } = ent.data;
-    const show = id === this.meId || hp < maxHp;
+    const show = id === this.meId || hp < maxHp || this.ui.partyIds.has(id);
     if (!show || ent.data.dead) return;
     const w = (ent.data.boss ? 28 : 14) * this.S;
     const y = ent.headY - 5;
     g.fillStyle(0x1f1a24, 0.9).fillRect(-w / 2 - 1, y - 1, w + 2, 5);
-    const color = k === 'm' ? 0xe0453a : id === this.meId ? 0x4ade80 : 0x60a5fa;
+    const color = k === 'm' ? 0xe0453a : id === this.meId || this.ui.partyIds.has(id) ? 0x4ade80 : 0x60a5fa;
     g.fillStyle(color, 1).fillRect(-w / 2, y, Math.max(0, (w * hp) / maxHp), 3);
   }
 
