@@ -162,7 +162,7 @@ client/            static, no build step: served as ES modules
   src/WorldScene.js  map rendering, interpolation, input -> intents
   src/ui.js        HUD / shop / tailor / bag panels
   src/minigame.js  close-up card-matching overlay
-  src/art.js       pixel art as ASCII data (characters, rat, drops, weapons)
+  src/art.js       pixel art as ASCII data (characters, monsters, drops, weapons)
   src/textures.js  turns art + procedural tiles into Phaser textures at runtime
 shared/            imported by both server and browser
   constants.js     items, weapons, monsters, shops, recipes, stat formulas
@@ -212,9 +212,20 @@ profile in a JSONB column, and `JsonStore` for local play. Profiles save on
 disconnect and every 30 s, and writes for the same account are queued so they
 land in order.
 
-**Art.** There are no image files. Characters, rats, drops and weapons are
-ASCII pixel art in `client/src/art.js`. Tiles are drawn in code. Each look and
-outfit combination is turned into a texture the first time it's needed.
+**Art.** There are no image files, so nothing extra to download.
+Characters, monsters, drops and weapons are ASCII pixel art in
+`client/src/art.js`, and tiles are drawn in code in `client/src/textures.js`.
+Each look and outfit combination is turned into a texture the first time it's
+needed.
+
+- **Sizes:** a map tile is 32×32 art pixels. Characters and monsters are 32×32
+  with their feet on the bottom row, and ground drops are 16×16. Bosses are
+  drawn at 2× or 3× (`scale` in `MONSTER_ART`).
+- **Sharpness:** the canvas is drawn at the screen's real pixel density (CSS
+  size × `devicePixelRatio`), and art is only ever scaled by whole numbers, so
+  pixels stay square and crisp on phones too.
+- **Screen-space sizes:** text sizes, HUD offsets and line widths in
+  `WorldScene` are written in CSS pixels and multiplied by `U`.
 
 ### Protocol (JSON over WebSocket)
 

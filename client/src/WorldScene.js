@@ -1,18 +1,24 @@
 import { EMOTES, ITEMS, NPC_RANGE, TILE } from '/shared/constants.js';
 import { ROOMS, roomSize, tileAt } from '/shared/maps.js';
-import { MONSTER_ART } from './art.js';
+import { CHAR_HEAD, HAND_X, HAND_Y, MONSTER_ART } from './art.js';
 import { TILE_VARIANTS, characterTexture, makeTextures, tileKey } from './textures.js';
 
 export const FONT = '"Mitr", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
-const DPR = Math.min(2, window.devicePixelRatio || 1);
+// Screen pixels per CSS pixel. The canvas is drawn at this density, so sizes
+// meant in CSS pixels (text, HUD offsets) are multiplied by it: see U.
+export const DPR = Math.min(3, window.devicePixelRatio || 1);
+const U = DPR;
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
 const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน' };
 
+// Text styles are given in CSS pixels.
 const text = (scene, x, y, str, style = {}) =>
   scene.add.text(x, y, str, {
-    fontFamily: FONT, fontSize: '13px', color: '#ffffff',
-    stroke: '#1f1a24', strokeThickness: 3, resolution: DPR, ...style,
+    fontFamily: FONT, color: '#ffffff', stroke: '#1f1a24', ...style,
+    fontSize: `${parseFloat(style.fontSize ?? '13px') * U}px`,
+    strokeThickness: (style.strokeThickness ?? 3) * U,
+    wordWrap: style.wordWrap && { ...style.wordWrap, width: style.wordWrap.width * U },
   });
 
 // Renders the current room and interpolates entities between server snapshots.
@@ -67,9 +73,13 @@ export class WorldScene extends Phaser.Scene {
     return TILE * this.S;
   }
 
+  // Screen pixels per art pixel: a whole number, so pixels stay square and
+  // sharp. Aim for at least 12 tiles of height and 8 of width on screen, with
+  // tiles no bigger than 80 CSS pixels.
   pickScale() {
     const { width, height } = this.scale;
-    return Math.max(2, Math.min(5, Math.floor(Math.min(height / (TILE * 12), width / (TILE * 8)))));
+    const max = Math.max(1, Math.floor((80 * U) / TILE));
+    return Math.max(1, Math.min(max, Math.floor(Math.min(height / (TILE * 12), width / (TILE * 8)))));
   }
 
   // Tile coords -> pixel position of the tile centre.
@@ -112,22 +122,22 @@ export class WorldScene extends Phaser.Scene {
       const cy = (p.y + p.h / 2) * T;
       const glow = this.add.ellipse(cx, cy, p.w * T * 1.4, p.h * T, 0xc79bff, 0.35);
       this.tweens.add({ targets: glow, alpha: 0.1, duration: 900, yoyo: true, repeat: -1 });
-      const label = text(this, cx, p.y * T - 4, p.label, { fontSize: '12px', color: '#e9d7ff' }).setOrigin(p.x === 0 ? 0 : 1, 1);
+      const label = text(this, cx, p.y * T - 4 * U, p.label, { fontSize: '12px', color: '#e9d7ff' }).setOrigin(p.x === 0 ? 0 : 1, 1);
       if (p.x === 0) label.x = p.x * T;
       else label.x = (p.x + p.w) * T;
       this.mapLayer.add([glow, label]);
     }
     for (const o of room.objects) {
       const cx = (o.x + o.w / 2) * T;
-      const icon = text(this, cx, o.y * T - 2, OBJECT_LABELS[o.kind] ?? o.name, { fontSize: '12px', color: '#ffe066' }).setOrigin(0.5, 1);
-      this.tweens.add({ targets: icon, y: icon.y - 4, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      const icon = text(this, cx, o.y * T - 2 * U, OBJECT_LABELS[o.kind] ?? o.name, { fontSize: '12px', color: '#ffe066' }).setOrigin(0.5, 1);
+      this.tweens.add({ targets: icon, y: icon.y - 4 * U, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       this.mapLayer.add(icon);
     }
     // Arrows pinned to the screen edge pointing at off-screen exits.
     this.portalMarks?.forEach((m) => m.destroy());
     this.portalMarks = room.portals.map((p) => {
       const arrow = text(this, 0, 0, '➜', { fontSize: '26px', color: '#e9d7ff' }).setOrigin(0.5);
-      const label = text(this, 0, 16, ROOMS[p.to].name, { fontSize: '11px', color: '#e9d7ff' }).setOrigin(0.5, 0);
+      const label = text(this, 0, 16 * U, ROOMS[p.to].name, { fontSize: '11px', color: '#e9d7ff' }).setOrigin(0.5, 0);
       const mark = this.add.container(0, 0, [arrow, label]).setScrollFactor(0).setDepth(2e6).setVisible(false);
       this.tweens.add({ targets: arrow, scale: 1.25, duration: 500, yoyo: true, repeat: -1 });
       return Object.assign(mark, { portal: p, arrow, label });
@@ -138,9 +148,9 @@ export class WorldScene extends Phaser.Scene {
       const key = characterTexture(this, npc.look);
       c.add(this.add.image(0, 0, 'shadow').setScale(S).setOrigin(0.5, 0.5));
       c.add(this.add.image(0, 0, `${key}_0`).setOrigin(0.5, 1).setScale(S));
-      c.add(text(this, 0, -16 * S - 2, npc.name, { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5, 1));
-      const bang = text(this, 0, -16 * S - 18, '💬', { fontSize: '14px' }).setOrigin(0.5, 1);
-      this.tweens.add({ targets: bang, y: bang.y - 3, duration: 600, yoyo: true, repeat: -1 });
+      c.add(text(this, 0, -CHAR_HEAD * S - 2 * U, npc.name, { fontSize: '11px', color: '#ffe066' }).setOrigin(0.5, 1));
+      const bang = text(this, 0, -CHAR_HEAD * S - 18 * U, '💬', { fontSize: '14px' }).setOrigin(0.5, 1);
+      this.tweens.add({ targets: bang, y: bang.y - 3 * U, duration: 600, yoyo: true, repeat: -1 });
       c.add(bang);
       return c;
     });
@@ -173,10 +183,10 @@ export class WorldScene extends Phaser.Scene {
     ent.rig = this.add.container(0, 0);
     if (e.k === 'd') {
       ent.body = this.add.image(0, 0, `drop_${e.item === 'coin' ? 'coin' : e.item}`).setScale(S);
-      this.tweens.add({ targets: ent.body, y: -S * 2, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.tweens.add({ targets: ent.body, y: -S * 4, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       ent.rig.add(ent.body);
       c.add(ent.rig);
-      ent.headY = -6 * S;
+      ent.headY = -12 * S;
     } else {
       c.add(this.add.image(0, 0, 'shadow').setScale(S));
       if (e.k === 'm') {
@@ -184,22 +194,22 @@ export class WorldScene extends Phaser.Scene {
         const scale = art.scale ?? 1;
         ent.body = this.add.image(0, 0, `${e.type}_0`).setOrigin(0.5, 1).setScale(S * scale);
         ent.rig.add(ent.body);
-        ent.headY = -(art.headY ?? 11) * S * scale;
+        ent.headY = -(art.headY ?? 22) * S * scale;
       } else {
         ent.texKey = characterTexture(this, e.look, e.body, e.head);
         ent.body = this.add.image(0, 0, `${ent.texKey}_0`).setOrigin(0.5, 1).setScale(S);
-        ent.weapon = this.add.image(4.5 * S, -5 * S, 'shadow').setOrigin(0.5, 0.3).setScale(S);
+        ent.weapon = this.add.image(HAND_X * S, HAND_Y * S, 'shadow').setOrigin(0.5, 0.3).setScale(S);
         ent.rig.add([ent.body, ent.weapon]);
         this.setWeapon(ent, e.weapon);
-        ent.headY = -16 * S;
+        ent.headY = -CHAR_HEAD * S;
       }
       c.add(ent.rig);
       ent.hpBar = this.add.graphics();
       c.add(ent.hpBar);
       const label = e.k === 'm' ? `${e.boss ? '👑 ' : ''}${e.name} Lv.${e.lvl}` : `Lv.${e.lvl} ${e.name}`;
-      ent.label = text(this, 0, ent.headY - 7, label, { fontSize: '11px', color: this.labelColor(e) }).setOrigin(0.5, 1);
+      ent.label = text(this, 0, ent.headY - 7 * U, label, { fontSize: '11px', color: this.labelColor(e) }).setOrigin(0.5, 1);
       c.add(ent.label);
-      ent.ring = this.add.ellipse(0, 0, 14 * S, 5 * S).setStrokeStyle(2, 0xff4d4d).setVisible(false);
+      ent.ring = this.add.ellipse(0, 0, 28 * S, 10 * S).setStrokeStyle(2 * U, 0xff4d4d).setVisible(false);
       c.addAt(ent.ring, 0);
       this.drawHp(ent);
       this.setDir(ent, e.dir);
@@ -238,7 +248,7 @@ export class WorldScene extends Phaser.Scene {
     ent.body.setFlipX(left);
     if (ent.weapon) {
       ent.weapon.setFlipX(left);
-      ent.weapon.x = (left ? -4.5 : 4.5) * this.S;
+      ent.weapon.x = (left ? -HAND_X : HAND_X) * this.S;
     }
   }
 
@@ -255,11 +265,11 @@ export class WorldScene extends Phaser.Scene {
     const { hp, maxHp, k, id } = ent.data;
     const show = id === this.meId || hp < maxHp || this.ui.partyIds.has(id);
     if (!show || ent.data.dead) return;
-    const w = (ent.data.boss ? 28 : 14) * this.S;
-    const y = ent.headY - 5;
-    g.fillStyle(0x1f1a24, 0.9).fillRect(-w / 2 - 1, y - 1, w + 2, 5);
+    const w = (ent.data.boss ? 56 : 28) * this.S;
+    const y = ent.headY - 5 * U;
+    g.fillStyle(0x1f1a24, 0.9).fillRect(-w / 2 - U, y - U, w + 2 * U, 5 * U);
     const color = k === 'm' ? 0xe0453a : id === this.meId || this.ui.partyIds.has(id) ? 0x4ade80 : 0x60a5fa;
-    g.fillStyle(color, 1).fillRect(-w / 2, y, Math.max(0, (w * hp) / maxHp), 3);
+    g.fillStyle(color, 1).fillRect(-w / 2, y, Math.max(0, (w * hp) / maxHp), 3 * U);
   }
 
   removeEntity(id, instant = false) {
@@ -296,7 +306,7 @@ export class WorldScene extends Phaser.Scene {
     const target = this.ents.get(d);
     if (attacker?.rig && target) {
       const dx = Math.sign(target.x - attacker.x) || 1;
-      this.tweens.add({ targets: attacker.rig, x: dx * this.S * 3, duration: 70, yoyo: true });
+      this.tweens.add({ targets: attacker.rig, x: dx * this.S * 6, duration: 70, yoyo: true });
     }
     if (!target) return;
     if (miss) return this.floatText(d, 'MISS', '#c8c8c8');
@@ -352,7 +362,7 @@ export class WorldScene extends Phaser.Scene {
     this.ents.delete(id);
     if (picker && this.fx) {
       this.tweens.add({
-        targets: ent.c, x: picker.c.x, y: picker.c.y - 8 * this.S, alpha: 0, duration: 250,
+        targets: ent.c, x: picker.c.x, y: picker.c.y - 16 * this.S, alpha: 0, duration: 250,
         onComplete: () => ent.c.destroy(),
       });
     } else {
@@ -370,7 +380,7 @@ export class WorldScene extends Phaser.Scene {
     this.drawHp(ent);
     this.floatText(id, 'LEVEL UP!', '#9ff0ff', 20);
     if (!this.fx) return;
-    const ring = this.add.ellipse(ent.c.x, ent.c.y, 10, 4, 0x9ff0ff, 0.6).setDepth(ent.c.depth - 1);
+    const ring = this.add.ellipse(ent.c.x, ent.c.y, 10 * U, 4 * U, 0x9ff0ff, 0.6).setDepth(ent.c.depth - 1);
     this.tweens.add({ targets: ring, scaleX: 8, scaleY: 8, alpha: 0, duration: 700, onComplete: () => ring.destroy() });
   }
 
@@ -407,7 +417,7 @@ export class WorldScene extends Phaser.Scene {
     if (fx === 'wave') {
       // Growing ring = get out before it fills up.
       const radius = r * this.T;
-      const ring = this.add.circle(ent.c.x, ent.c.y, radius, 0x5b93b3, 0.12).setStrokeStyle(3, 0x9cc8e0, 0.9);
+      const ring = this.add.circle(ent.c.x, ent.c.y, radius, 0x5b93b3, 0.12).setStrokeStyle(3 * U, 0x9cc8e0, 0.9);
       const fill = this.add.circle(ent.c.x, ent.c.y, 1, 0x5b93b3, 0.35);
       ring.setDepth(ent.c.depth - 1);
       fill.setDepth(ent.c.depth - 1);
@@ -431,11 +441,11 @@ export class WorldScene extends Phaser.Scene {
   floatText(id, str, color, size = 16) {
     const ent = this.ents.get(id);
     if (!ent || !this.fx) return;
-    const t = text(this, ent.c.x + (Math.random() - 0.5) * 16, ent.c.y + ent.headY - 16, str, {
+    const t = text(this, ent.c.x + (Math.random() - 0.5) * 16 * U, ent.c.y + ent.headY - 16 * U, str, {
       fontSize: `${size}px`, color, fontStyle: 'bold',
     }).setOrigin(0.5, 1);
     this.fxLayer.add(t);
-    this.tweens.add({ targets: t, y: t.y - 28, alpha: 0, duration: 900, ease: 'Cubic.out', onComplete: () => t.destroy() });
+    this.tweens.add({ targets: t, y: t.y - 28 * U, alpha: 0, duration: 900, ease: 'Cubic.out', onComplete: () => t.destroy() });
   }
 
   // ---------- social ----------
@@ -444,7 +454,7 @@ export class WorldScene extends Phaser.Scene {
     const ent = this.ents.get(id);
     if (!ent || !this.fx) return;
     ent.bubble?.destroy();
-    const pad = 6;
+    const pad = 6 * U;
     const t = text(this, 0, 0, str, {
       fontSize: '13px', color: '#1f1a24', strokeThickness: 0,
       wordWrap: { width: 170, useAdvancedWrap: true }, align: 'center',
@@ -452,9 +462,9 @@ export class WorldScene extends Phaser.Scene {
     const w = t.width + pad * 2;
     const h = t.height + pad * 2;
     const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.95).lineStyle(2, 0x1f1a24, 1);
-    g.fillRoundedRect(-w / 2, -h, w, h, 8).strokeRoundedRect(-w / 2, -h, w, h, 8);
-    g.fillTriangle(-5, -1, 5, -1, 0, 6).lineBetween(-5, 0, 0, 6).lineBetween(5, 0, 0, 6);
+    g.fillStyle(0xffffff, 0.95).lineStyle(2 * U, 0x1f1a24, 1);
+    g.fillRoundedRect(-w / 2, -h, w, h, 8 * U).strokeRoundedRect(-w / 2, -h, w, h, 8 * U);
+    g.fillTriangle(-5 * U, -U, 5 * U, -U, 0, 6 * U).lineBetween(-5 * U, 0, 0, 6 * U).lineBetween(5 * U, 0, 0, 6 * U);
     t.y = -pad;
     const bubble = this.add.container(0, 0, [g, t]);
     this.fxLayer.add(bubble);
@@ -478,7 +488,7 @@ export class WorldScene extends Phaser.Scene {
     const reset = () => rig.setScale(1).setAngle(0).setPosition(0, 0);
     if (e === 'wai') this.tweens.add({ targets: rig, angle: 12 * (ent.data.dir || 1), duration: 300, yoyo: true, hold: 500, onComplete: reset });
     if (e === 'squat') this.tweens.add({ targets: rig, scaleY: 0.72, duration: 200, yoyo: true, hold: 1600, onComplete: reset });
-    if (e === 'vroom') this.tweens.add({ targets: rig, x: 3 * this.S, duration: 50, yoyo: true, repeat: 12, onComplete: reset });
+    if (e === 'vroom') this.tweens.add({ targets: rig, x: 6 * this.S, duration: 50, yoyo: true, repeat: 12, onComplete: reset });
     if (e === 'dance') this.tweens.add({ targets: rig, angle: { from: -12, to: 12 }, duration: 220, yoyo: true, repeat: 5, onComplete: reset });
   }
 
@@ -540,12 +550,12 @@ export class WorldScene extends Phaser.Scene {
       mark.setVisible(!inside);
       if (inside) continue;
       // Keep clear of the HUD at the top and the buttons/chat at the bottom.
-      const x = Phaser.Math.Clamp(sx, 30, cam.width - 30);
-      const y = Phaser.Math.Clamp(sy, 130, cam.height - 290);
+      const x = Phaser.Math.Clamp(sx, 30 * U, cam.width - 30 * U);
+      const y = Phaser.Math.Clamp(sy, 130 * U, cam.height - 290 * U);
       mark.setPosition(x, y);
       mark.arrow.setRotation(Math.atan2(sy - y, sx - x));
       const right = x > cam.width / 2;
-      mark.label.setOrigin(right ? 1 : 0, 0).setX(right ? 12 : -12);
+      mark.label.setOrigin(right ? 1 : 0, 0).setX(right ? 12 * U : -12 * U);
     }
   }
 
@@ -565,7 +575,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   showMarker(x, y) {
-    const m = this.add.ellipse(this.px(x), this.px(y) + this.T * 0.3, this.T * 0.8, this.T * 0.35).setStrokeStyle(2, 0xffffff, 0.9);
+    const m = this.add.ellipse(this.px(x), this.px(y) + this.T * 0.3, this.T * 0.8, this.T * 0.35).setStrokeStyle(2 * U, 0xffffff, 0.9);
     m.setDepth(0);
     this.tweens.add({ targets: m, scale: 0.3, alpha: 0, duration: 450, onComplete: () => m.destroy() });
   }
@@ -598,7 +608,7 @@ export class WorldScene extends Phaser.Scene {
         if (ent.body.texture.key !== key) ent.body.setTexture(key);
       }
       this.placeEntity(ent);
-      if (ent.bubble) ent.bubble.setPosition(ent.c.x, ent.c.y + ent.headY - 20);
+      if (ent.bubble) ent.bubble.setPosition(ent.c.x, ent.c.y + ent.headY - 20 * U);
     }
 
     const me = this.ents.get(this.meId);
