@@ -1,10 +1,11 @@
 import { TILE } from '/shared/constants.js';
 import {
-  BODY_OVERLAYS, CHAR_FRAMES, DROP_ART, MONSTER_ART, OUTLINE, WEAPON_ART,
+  BODY_OVERLAYS, CHAR_FRAMES, DROP, DROP_ART, HEAD_BOB, MONSTER_ART, OUTLINE, SPRITE, WEAPON_ART,
   characterPalette, paint, shade,
 } from './art.js';
 
 // Every texture is generated at startup from code — no image files to load.
+// Tiles are TILE (32) art pixels square; sprites come from art.js.
 
 function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -20,21 +21,21 @@ function seeded(seed) {
   };
 }
 
-function speckle(ctx, rnd, colors, count) {
+function speckle(ctx, rnd, colors, count, x0 = 0, y0 = 0, w = TILE, h = TILE) {
   for (let i = 0; i < count; i++) {
     ctx.fillStyle = colors[Math.floor(rnd() * colors.length)];
-    ctx.fillRect(Math.floor(rnd() * TILE), Math.floor(rnd() * TILE), 1, 1);
+    ctx.fillRect(x0 + Math.floor(rnd() * w), y0 + Math.floor(rnd() * h), 1, 1);
   }
 }
 
 const THEMES = {
-  market: { wall: '#7a4b3a', mortar: '#5a3328', floor: '#d8c9a8', floorLine: '#c4b28e' },
-  alley: { wall: '#5a5d66', mortar: '#44464d', floor: '#a3a7ab', floorLine: '#8d9195' },
-  canal: { wall: '#5b4a3a', mortar: '#46382b', floor: '#c9b48a', floorLine: '#b39d72' },
-  suburb: { wall: '#4a4f57', mortar: '#3a3e45', floor: '#b8a27a', floorLine: '#a08a64' },
+  market: { wall: '#7a4b3a', mortar: '#5a3328', floor: '#d8c9a8', floorLine: '#b9a784' },
+  alley: { wall: '#5a5d66', mortar: '#40424a', floor: '#a3a7ab', floorLine: '#83878c' },
+  canal: { wall: '#5b4a3a', mortar: '#46382b', floor: '#c9b48a', floorLine: '#a8936a' },
+  suburb: { wall: '#4a4f57', mortar: '#3a3e45', floor: '#b8a27a', floorLine: '#9a855f' },
 };
 
-// Draw one tile variant. `v` picks a noise seed so floors don't look tiled.
+// Draw one 32x32 tile variant. `v` picks a noise seed so floors don't look tiled.
 function drawTile(ctx, ch, theme, v) {
   const t = THEMES[theme];
   const rnd = seeded(ch.charCodeAt(0) * 131 + v * 977 + 7);
@@ -43,138 +44,222 @@ function drawTile(ctx, ch, theme, v) {
     ctx.fillStyle = c;
     ctx.fillRect(x, y, w, h);
   };
+  // A brick/paver with a lit top edge and a shaded bottom edge.
+  const block = (x, y, w, h, base) => {
+    fill(base, x, y, w, h);
+    fill(shade(base, 1.1), x, y, w, 1);
+    fill(shade(base, 0.86), x, y + h - 1, w, 1);
+  };
+  const tuft = (x, y, c, d) => {
+    fill(c, x, y, 1, 2), fill(c, x + 2, y, 1, 2), fill(c, x + 1, y + 1, 1, 2);
+    if (d) fill(d, x + 1, y + 3, 1, 1);
+  };
   switch (ch) {
-    case '.':
-      fill(t.floor);
-      ctx.fillStyle = t.floorLine;
-      ctx.fillRect(0, 7, S, 1);
-      ctx.fillRect(0, 15, S, 1);
-      ctx.fillRect(v % 2 ? 4 : 11, 0, 1, 7);
-      ctx.fillRect(v % 2 ? 12 : 3, 8, 1, 7);
-      speckle(ctx, rnd, [shade(t.floor, 1.05), shade(t.floor, 0.92)], 10);
+    case '.': {
+      // Paving slabs in running bond.
+      fill(t.floorLine);
+      for (let row = 0; row < 4; row++) {
+        const off = row % 2 ? 8 : 0;
+        for (let x = -off; x < S; x += 16) {
+          const tone = shade(t.floor, 0.97 + ((row * 3 + x + v * 5) % 4) * 0.02);
+          block(Math.max(0, x + 1), row * 8 + 1, Math.min(15, x + 16 - Math.max(0, x + 1)), 7, tone);
+        }
+      }
+      speckle(ctx, rnd, [shade(t.floor, 1.07), shade(t.floor, 0.9)], 18);
       break;
+    }
     case ',':
       fill('#6fae4b');
-      speckle(ctx, rnd, ['#5c9a3c', '#86c35e', '#4f8a33'], 28);
-      if (v === 2) fill('#f07ab0', 5, 6, 1, 1), fill('#ffe066', 11, 10, 1, 1);
+      speckle(ctx, rnd, ['#63a243', '#7bba55'], 60);
+      for (let i = 0; i < 7; i++) tuft(Math.floor(rnd() * 28) + 1, Math.floor(rnd() * 27) + 1, '#8fcf65', '#4f8a33');
+      for (let i = 0; i < 4; i++) tuft(Math.floor(rnd() * 28) + 1, Math.floor(rnd() * 27) + 1, '#4f8a33');
+      if (v === 2) {
+        fill('#f07ab0', 8, 10, 2, 2), fill('#ffe066', 9, 10, 1, 1);
+        fill('#fff3d6', 22, 21, 2, 2), fill('#ffe066', 22, 21, 1, 1);
+      }
       break;
     case '=':
       fill(t.floor);
-      speckle(ctx, rnd, [shade(t.floor, 0.88), shade(t.floor, 1.08), '#7e8286'], 22);
+      speckle(ctx, rnd, [shade(t.floor, 0.9), shade(t.floor, 1.08)], 70);
+      speckle(ctx, rnd, ['#7e8286', shade(t.floor, 0.75)], 10);
       if (v === 1) {
-        ctx.fillStyle = shade(t.floor, 0.7);
-        for (let i = 0; i < 6; i++) ctx.fillRect(3 + i, 4 + ((i * 7) % 3), 1, 1);
+        // a hairline crack
+        ctx.fillStyle = shade(t.floor, 0.68);
+        for (let i = 0; i < 12; i++) ctx.fillRect(6 + i, 8 + Math.round(Math.sin(i * 0.9) * 2) + (i >> 2), 1, 1);
       }
+      if (v === 2) fill(shade(t.floor, 0.82), 20, 18, 3, 2), fill(shade(t.floor, 1.12), 20, 18, 2, 1);
       break;
     case '#':
-      fill(t.wall);
-      ctx.fillStyle = t.mortar;
-      for (let y = 3; y < S; y += 4) ctx.fillRect(0, y, S, 1);
-      for (let y = 0; y < S; y += 4) ctx.fillRect(((y / 4) % 2) * 4 + 2, y, 1, 3), ctx.fillRect(((y / 4) % 2) * 4 + 10, y, 1, 3);
-      speckle(ctx, rnd, [shade(t.wall, 1.15)], 6);
+      fill(t.mortar);
+      for (let row = 0; row < 4; row++) {
+        const off = row % 2 ? 8 : 0;
+        for (let x = -off; x < S; x += 16) {
+          const tone = shade(t.wall, 0.94 + ((row * 5 + x + v * 3) % 5) * 0.03);
+          block(Math.max(0, x), row * 8, Math.min(15, x + 15 - Math.max(0, x)), 7, tone);
+        }
+      }
+      speckle(ctx, rnd, [shade(t.wall, 1.18), shade(t.wall, 0.8)], 10);
       break;
     case 'A': {
-      // Striped market-stall awning with a scalloped edge.
+      // Striped market-stall awning, lighter at the top, scalloped edge, wooden beam.
       const cols = v % 2 ? ['#d94f4f', '#fff3d6'] : ['#3b82c4', '#fff3d6'];
-      for (let x = 0; x < S; x += 4) fill(cols[(x / 4) % 2], x, 0, 4, 12);
-      fill(shade(cols[0], 0.6), 0, 12, S, 1);
-      fill('#3b2a20', 0, 13, S, 3);
-      for (let x = 0; x < S; x += 4) fill(cols[(x / 4) % 2], x + 1, 12, 2, 2);
+      for (let x = 0; x < S; x += 8) {
+        const c = cols[(x / 8) % 2];
+        fill(shade(c, 1.06), x, 0, 8, 8);
+        fill(c, x, 8, 8, 12);
+        fill(shade(c, 0.88), x, 20, 8, 4);
+        // scallop
+        fill(c, x + 1, 24, 6, 1), fill(c, x + 2, 25, 4, 1);
+        fill(shade(c, 0.6), x + 1, 25, 1, 1), fill(shade(c, 0.6), x + 6, 25, 1, 1), fill(shade(c, 0.6), x + 2, 26, 4, 1);
+      }
+      fill(shade(cols[0], 0.55), 0, 23, S, 1);
+      fill('#3b2a20', 0, 27, S, 5);
+      fill('#5a3d2a', 0, 27, S, 1);
       break;
     }
     case 'T':
+      // Wooden table seen from above, planks and legs.
       fill(t.floor);
-      fill('#6b4226', 1, 2, 14, 12);
-      fill('#8b5a33', 2, 3, 12, 9);
-      fill('#a8703f', 3, 4, 4, 1);
-      fill('#4a2c18', 2, 14, 2, 2), fill('#4a2c18', 12, 14, 2, 2);
+      fill(OUTLINE, 2, 4, 28, 22);
+      fill('#8b5a33', 3, 5, 26, 19);
+      for (let y = 5; y < 24; y += 5) fill('#6b4226', 3, y + 4, 26, 1);
+      fill('#a8703f', 4, 6, 10, 1), fill('#a8703f', 16, 11, 8, 1), fill('#a8703f', 6, 16, 12, 1);
+      fill('#4a2c18', 4, 26, 3, 5), fill('#4a2c18', 25, 26, 3, 5);
+      fill('#6b4226', 3, 24, 26, 2);
       break;
     case 't':
-      // Round shrub: outlined blob with a highlight.
+      // Round shrub: outlined blob with leaf clusters and a highlight.
       fill('#6fae4b');
-      fill(OUTLINE, 3, 1, 10, 14), fill(OUTLINE, 1, 3, 14, 10), fill(OUTLINE, 2, 2, 12, 12);
-      fill('#2f6b2a', 3, 2, 10, 12), fill('#2f6b2a', 2, 3, 12, 10);
-      fill('#3f8a36', 3, 3, 9, 8);
-      fill('#5cae4a', 4, 4, 4, 3);
-      speckle(ctx, rnd, ['#56a84a', '#2a5e25'], 8);
+      speckle(ctx, rnd, ['#63a243'], 30);
+      fill('rgba(0,0,0,0.18)', 6, 26, 22, 4);
+      fill(OUTLINE, 7, 2, 18, 26), fill(OUTLINE, 4, 5, 24, 20), fill(OUTLINE, 5, 3, 22, 24), fill(OUTLINE, 3, 8, 26, 14);
+      fill('#2f6b2a', 8, 3, 16, 24), fill('#2f6b2a', 5, 6, 22, 18), fill('#2f6b2a', 6, 4, 20, 22), fill('#2f6b2a', 4, 9, 24, 12);
+      fill('#3f8a36', 7, 5, 16, 16), fill('#3f8a36', 6, 8, 18, 10);
+      fill('#5cae4a', 9, 6, 7, 5), fill('#5cae4a', 8, 8, 4, 5);
+      fill('#86cf6a', 10, 7, 3, 2);
+      speckle(ctx, rnd, ['#56a84a', '#2a5e25', '#4a9a3e'], 30, 6, 6, 20, 18);
       break;
     case 'B':
-      // ลังโฟม: white styrofoam box.
+      // ลังโฟม: white styrofoam box with a lid and packing tape.
       fill(t.floor);
-      fill(OUTLINE, 1, 3, 14, 12);
-      fill('#eef0f2', 2, 4, 12, 10);
-      fill('#d4d8dc', 2, 4, 12, 2);
-      fill('#c2c7cc', 7, 6, 1, 8);
+      fill('rgba(0,0,0,0.18)', 4, 27, 26, 3);
+      fill(OUTLINE, 2, 6, 28, 22);
+      fill('#dfe3e7', 3, 11, 26, 16);
+      fill('#f4f6f8', 3, 7, 26, 5);
+      fill('#c4c9ce', 3, 11, 26, 1);
+      fill('#b9d8ee', 14, 7, 4, 20);
+      fill('#c2c7cc', 3, 25, 26, 2);
+      speckle(ctx, rnd, ['#cfd4d9'], 12, 4, 13, 24, 12);
       break;
     case 'K':
-      // รถเข็น: street cart with wheels.
+      // รถเข็น: street food cart with a glass case, red trim and wheels.
       fill(t.floor);
-      fill(OUTLINE, 0, 3, 16, 9);
-      fill('#b8bfc6', 1, 4, 14, 7);
-      fill('#e0453a', 1, 4, 14, 2);
-      fill(OUTLINE, 2, 12, 4, 4), fill(OUTLINE, 10, 12, 4, 4);
-      fill('#777', 3, 13, 2, 2), fill('#777', 11, 13, 2, 2);
+      fill('rgba(0,0,0,0.18)', 2, 28, 28, 3);
+      fill(OUTLINE, 1, 4, 30, 21);
+      fill('#b8bfc6', 2, 13, 28, 11);
+      fill('#dfe7ee', 3, 5, 26, 8);
+      fill('#ffffff', 5, 6, 6, 2), fill('#a9c9e0', 3, 11, 26, 1);
+      fill('#e0453a', 2, 13, 28, 3), fill('#ff8a7a', 2, 13, 28, 1);
+      fill('#8d949e', 2, 22, 28, 2);
+      fill(OUTLINE, 4, 23, 7, 7), fill(OUTLINE, 21, 23, 7, 7);
+      fill('#6e7682', 5, 24, 5, 5), fill('#6e7682', 22, 24, 5, 5);
+      fill('#c9ced6', 7, 26, 1, 1), fill('#c9ced6', 24, 26, 1, 1);
       break;
     case 'N':
       // กระดานรับงาน: wooden notice board with pinned papers.
       fill(t.floor);
-      fill('#4a2c18', 2, 12, 2, 4), fill('#4a2c18', 12, 12, 2, 4);
-      fill(OUTLINE, 0, 1, 16, 12);
-      fill('#8b5a33', 1, 2, 14, 10);
-      fill('#fff3d6', 2 + (v % 2), 3, 4, 4), fill('#ffe066', 8, 4, 5, 3), fill('#fff3d6', 5, 8, 5, 3);
-      fill('#d94f4f', 3 + (v % 2), 3, 1, 1), fill('#d94f4f', 10, 4, 1, 1);
+      fill('#4a2c18', 4, 22, 4, 10), fill('#4a2c18', 24, 22, 4, 10);
+      fill(OUTLINE, 0, 1, 32, 23);
+      fill('#8b5a33', 1, 2, 30, 21);
+      fill('#a8703f', 1, 2, 30, 1), fill('#6b4226', 1, 22, 30, 1);
+      fill('#fff3d6', 3 + (v % 2), 5, 9, 9), fill('#ffe066', 15, 4, 11, 7), fill('#fff3d6', 9, 14, 11, 7);
+      ctx.fillStyle = '#b9a784';
+      for (const [x, y, w] of [[5 + (v % 2), 8, 5], [5 + (v % 2), 10, 4], [17, 7, 7], [11, 17, 7], [11, 19, 5]]) ctx.fillRect(x, y, w, 1);
+      fill('#d94f4f', 7 + (v % 2), 5, 1, 1), fill('#3b82c4', 20, 4, 1, 1), fill('#d94f4f', 14, 14, 1, 1);
       break;
     case 'W':
-      // สะพานไม้: planks over water.
-      fill('#3a6f8f');
-      fill('#8b5a33', 0, 0, S, S);
-      ctx.fillStyle = '#6b4226';
-      for (let y = 3; y < S; y += 4) ctx.fillRect(0, y, S, 1);
-      ctx.fillStyle = '#a8703f';
-      for (let y = 0; y < S; y += 4) ctx.fillRect((v * 5 + y) % 12, y, 3, 1);
-      fill('#3b2a20', v % 2 ? 2 : 12, 1, 1, 1), fill('#3b2a20', v % 2 ? 9 : 5, 9, 1, 1);
+      // สะพานไม้: planks over water, with gaps and nails.
+      fill('#2e5c78');
+      for (let y = 0; y < S; y += 8) {
+        const off = ((y / 8 + v) % 3) * 5;
+        fill('#8b5a33', 0, y, S, 7);
+        fill('#a8703f', 0, y, S, 1);
+        fill('#6b4226', 0, y + 6, S, 1);
+        fill('#6b4226', (off + 13) % S, y + 1, 1, 5);
+        fill('#3b2a20', (off + 3) % S, y + 3, 1, 1), fill('#3b2a20', (off + 23) % S, y + 3, 1, 1);
+        fill('#9a6a3c', (off + 6) % 26, y + 2, 5, 1);
+      }
       break;
     case 's':
       // น้ำตื้น: lighter, greener water you can wade through.
       fill('#5f9ea0');
-      ctx.fillStyle = '#86c0bf';
-      for (let i = 0; i < 3; i++) ctx.fillRect(1 + ((i * 6 + v * 4) % 12), 2 + i * 5, 3, 1);
-      speckle(ctx, rnd, ['#4f8e90', '#6fb0ae', '#7a9a4a'], 10);
+      speckle(ctx, rnd, ['#56918f', '#6aabab'], 40);
+      ctx.fillStyle = '#8cc6c4';
+      for (let i = 0; i < 4; i++) ctx.fillRect(2 + ((i * 9 + v * 5) % 24), 3 + i * 8, 6, 1);
+      ctx.fillStyle = '#4f8e90';
+      for (let i = 0; i < 4; i++) ctx.fillRect(4 + ((i * 11 + v * 7) % 24), 5 + i * 8, 5, 1);
+      if (v === 1) fill('#6a9a3e', 20, 20, 5, 3), fill('#7ab04a', 21, 20, 3, 1), fill('#5f9ea0', 22, 21, 1, 2);
       break;
     case 'H':
-      // บ้านริมน้ำ: wooden wall with a window and a tin roof edge.
+      // บ้านริมน้ำ: wooden plank wall, tin roof edge, a window.
       fill('#7a5230');
-      ctx.fillStyle = '#5e3e22';
-      for (let x = 0; x < S; x += 4) ctx.fillRect(x, 0, 1, S);
-      fill('#9aa3ad', 0, 0, S, 3);
-      fill('#6e7682', 0, 2, S, 1);
-      if (v !== 1) fill(OUTLINE, 5, 6, 6, 5), fill('#ffe8a3', 6, 7, 4, 3);
+      for (let x = 0; x < S; x += 6) fill('#5e3e22', x, 0, 1, S), fill('#8a6038', x + 1, 0, 1, S);
+      speckle(ctx, rnd, ['#6a4526'], 14);
+      fill('#9aa3ad', 0, 0, S, 6);
+      for (let x = 0; x < S; x += 4) fill('#c9ced6', x, 0, 1, 5);
+      fill('#6e7682', 0, 5, S, 2);
+      if (v !== 1) {
+        fill(OUTLINE, 9, 11, 14, 13);
+        fill('#ffe8a3', 10, 12, 12, 11);
+        fill('#fff6d0', 11, 13, 4, 3);
+        fill('#7a5230', 15, 12, 2, 11), fill('#7a5230', 10, 17, 12, 1);
+        fill('#5e3e22', 8, 24, 16, 2);
+      }
       break;
     case 'G':
-      // โกดังสังกะสี: rusty corrugated metal wall.
+      // โกดังสังกะสี: corrugated metal with rust streaks.
       fill('#7a8088');
-      ctx.fillStyle = '#5f656d';
-      for (let x = 1; x < S; x += 3) ctx.fillRect(x, 0, 1, S);
-      speckle(ctx, rnd, ['#a0522d', '#8b4513', '#9aa3ad'], 14);
-      if (v === 2) fill('#3b3f47', 4, 5, 8, 6);
+      for (let x = 0; x < S; x += 4) fill('#8d949e', x, 0, 1, S), fill('#5f656d', x + 2, 0, 1, S);
+      for (let i = 0; i < 3; i++) {
+        const x = Math.floor(rnd() * 28);
+        const h = 6 + Math.floor(rnd() * 14);
+        fill('#8b4513', x, 0, 1, h), fill('#a0522d', x + 1, 0, 1, Math.floor(h * 0.6));
+      }
+      speckle(ctx, rnd, ['#a0522d', '#9aa3ad'], 16);
+      fill('#5f656d', 0, 15, S, 1), fill('#9aa3ad', 0, 16, S, 1);
+      if (v === 2) fill(OUTLINE, 8, 10, 16, 14), fill('#3b3f47', 9, 11, 14, 12), fill('#6e7682', 9, 11, 14, 1);
       break;
     case 'r':
-      // นาข้าว: rows of rice in water.
-      fill('#8fbf5a');
-      ctx.fillStyle = '#6a9a3e';
-      for (let y = 1; y < S; y += 4) for (let x = (y + v) % 4; x < S; x += 4) ctx.fillRect(x, y, 1, 3);
-      speckle(ctx, rnd, ['#b8d880', '#7fb04a'], 8);
+      // นาข้าว: rows of rice in muddy water.
+      fill('#7aa45a');
+      speckle(ctx, rnd, ['#6d9a4c', '#86b066'], 40);
+      for (let y = 2; y < S; y += 8) {
+        for (let x = ((y >> 3) + v) % 2 ? 2 : 6; x < S; x += 8) {
+          fill('#4f7a2e', x, y + 2, 1, 5), fill('#9ccf5a', x + 1, y, 1, 7), fill('#6fae3e', x + 2, y + 1, 1, 6), fill('#b8e070', x + 1, y, 1, 2);
+        }
+      }
       break;
     case '~':
       fill('#3a6f8f');
-      ctx.fillStyle = '#5b93b3';
-      for (let i = 0; i < 3; i++) ctx.fillRect(2 + ((i * 5 + v * 3) % 10), 3 + i * 5, 4, 1);
-      speckle(ctx, rnd, ['#2e5c78', '#4a82a2'], 10);
+      speckle(ctx, rnd, ['#33658a', '#4279a0'], 50);
+      ctx.fillStyle = '#6aa3c4';
+      for (let i = 0; i < 4; i++) {
+        const x = 2 + ((i * 11 + v * 7) % 22);
+        ctx.fillRect(x, 4 + i * 8, 6, 1);
+        ctx.fillRect(x + 2, 3 + i * 8, 3, 1);
+      }
+      ctx.fillStyle = '#2e5c78';
+      for (let i = 0; i < 3; i++) ctx.fillRect(6 + ((i * 13 + v * 5) % 20), 8 + i * 9, 7, 1);
       break;
     case 'P':
-      fill('#8e5cc7', 0, 0, S, S);
-      fill('#b48ae6', 2, 2, 12, 12);
-      fill('#e3cffa', 5, 5, 6, 6);
+      // Portal: glowing violet whirl.
+      fill('#6a3fa6');
+      fill('#8e5cc7', 2, 2, 28, 28);
+      fill('#b48ae6', 6, 6, 20, 20);
+      fill('#d9c2ff', 10, 10, 12, 12);
+      fill('#f3eaff', 13, 13, 6, 6);
+      ctx.fillStyle = '#f3eaff';
+      for (let i = 0; i < 6; i++) ctx.fillRect(4 + ((i * 9 + v * 4) % 24), 3 + ((i * 7) % 26), 1, 1);
       break;
     default:
       fill('#f0f');
@@ -200,13 +285,13 @@ export function makeTextures(scene) {
   }
   for (const [type, art] of Object.entries(MONSTER_ART)) {
     art.frames.forEach((rows, i) => {
-      const c = canvas(16, 16);
+      const c = canvas(SPRITE, SPRITE);
       paint(c.getContext('2d'), rows, art.palette);
       tex.addCanvas(`${type}_${i}`, c);
     });
   }
   for (const [id, art] of Object.entries(DROP_ART)) {
-    const c = canvas(8, 8);
+    const c = canvas(DROP, DROP);
     paint(c.getContext('2d'), art.rows, art.palette);
     tex.addCanvas(`drop_${id}`, c);
   }
@@ -215,12 +300,13 @@ export function makeTextures(scene) {
     paint(c.getContext('2d'), art.rows, art.palette);
     tex.addCanvas(`weapon_${id}`, c);
   }
-  // Soft shadow + selection ring.
-  const sh = canvas(12, 4);
+  // Soft oval shadow under feet.
+  const sh = canvas(24, 8);
   const sctx = sh.getContext('2d');
-  sctx.fillStyle = 'rgba(0,0,0,0.28)';
-  sctx.fillRect(2, 0, 8, 4);
-  sctx.fillRect(0, 1, 12, 2);
+  sctx.fillStyle = 'rgba(0,0,0,0.26)';
+  sctx.fillRect(4, 0, 16, 8);
+  sctx.fillRect(2, 1, 20, 6);
+  sctx.fillRect(0, 2, 24, 4);
   tex.addCanvas('shadow', sh);
 }
 
@@ -230,14 +316,14 @@ export function characterTexture(scene, look, body, head) {
   if (!scene.textures.exists(`${key}_0`)) {
     const palette = characterPalette(look);
     CHAR_FRAMES.forEach((rows, i) => {
-      const c = canvas(16, 16);
+      const c = canvas(SPRITE, SPRITE);
       const ctx = c.getContext('2d');
       paint(ctx, rows, palette);
       for (const id of [body, head]) {
         const overlay = BODY_OVERLAYS[id];
         if (!overlay) continue;
-        // The walk frame's head is one pixel lower, so hats follow it.
-        const dy = overlay.followsHead && i === 1 ? 1 : 0;
+        // The walk frame's head bobs down, so hats follow it.
+        const dy = overlay.followsHead && i === 1 ? HEAD_BOB : 0;
         paint(ctx, overlay.rows, overlay.palette, 0, dy);
       }
       scene.textures.addCanvas(`${key}_${i}`, c);

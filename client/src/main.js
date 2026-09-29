@@ -1,7 +1,7 @@
 import { NAME_RE, PASSWORD_MAX, PASSWORD_MIN } from '/shared/constants.js';
 import { Net } from './net.js';
 import { UI } from './ui.js';
-import { WorldScene } from './WorldScene.js';
+import { DPR, WorldScene } from './WorldScene.js';
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -15,14 +15,19 @@ const sceneReady = new Promise((resolve) => (ui.onSceneReady = resolve));
 sceneReady.then((scene) => (window.__scene = scene));
 const fontsReady = document.fonts?.load('13px Mitr').catch(() => {}) ?? Promise.resolve();
 fontsReady.then(() => {
-  new Phaser.Game({
+  // The canvas has one pixel per screen pixel (CSS size × DPR, shrunk back by
+  // `zoom`), so pixel art scaled by a whole number stays sharp on phones too.
+  const size = () => [Math.round(window.innerWidth * DPR), Math.round(window.innerHeight * DPR)];
+  const [width, height] = size();
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent: 'game',
     backgroundColor: '#1f1a24',
     pixelArt: true,
-    scale: { mode: Phaser.Scale.RESIZE, width: window.innerWidth, height: window.innerHeight },
+    scale: { mode: Phaser.Scale.NONE, width, height, zoom: 1 / DPR },
     scene: new WorldScene(net, ui),
   });
+  window.addEventListener('resize', () => game.scale.resize(...size()));
 });
 
 const form = $('#login-form');

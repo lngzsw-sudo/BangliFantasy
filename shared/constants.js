@@ -3,7 +3,7 @@
 
 export const TICK_RATE = 10; // server ticks per second (GDD: 5–10)
 export const TICK_MS = 1000 / TICK_RATE;
-export const TILE = 16; // pixels per tile (pixel-art base resolution)
+export const TILE = 32; // art pixels per tile (pixel-art base resolution)
 
 export const PLAYER_SPEED = 4; // tiles per second
 export const CHAT_MAX = 80;
