@@ -209,9 +209,13 @@ export class UI {
     const title = $('#panel-title');
     const body = $('#panel-body');
     const coins = `<div class="wallet">🪙 ${me.coins} · 🥫 เศษขยะ ${me.inv.junk ?? 0}</div>`;
-    if (p.kind === 'cafe' || p.kind === 'grocery') {
+    if (p.kind === 'cafe' || p.kind === 'grocery' || p.kind === 'pets') {
       title.textContent = p.npc.name;
-      const greeting = p.kind === 'cafe' ? 'โอเลี้ยงเย็นๆ ไหมลูก? กินแล้วตีหนูมันส์' : 'ของครบ ราคาเป็นกันเอง เลือกได้เลยเฮีย';
+      const greeting = {
+        cafe: 'โอเลี้ยงเย็นๆ ไหมลูก? กินแล้วตีหนูมันส์',
+        grocery: 'ของครบ ราคาเป็นกันเอง เลือกได้เลยเฮีย',
+        pets: 'น้องๆ พร้อมไปอยู่บ้านใหม่จ้ะ รับไปเลี้ยงแล้วเดินตามต้อยๆ เลย',
+      }[p.kind];
       body.innerHTML = `<p class="npc-say">“${greeting}”</p>${coins}` + Object.entries(SHOPS[p.kind]).map(([id, price]) => {
         const item = ITEMS[id];
         const owned = item.slot && me.inv[id];
@@ -256,7 +260,8 @@ export class UI {
         let action = '';
         if (item.use) action = `<button data-use="${id}">ใช้</button>`;
         else if (FASHION_SLOTS.includes(item.slot)) {
-          action = equipped ? `<button data-unequip="${item.slot}">ถอด</button>` : `<button data-equip="${id}">ใส่</button>`;
+          const [on, off] = { prop: ['ถือ', 'เก็บ'], pet: ['พาไปด้วย', 'ให้อยู่บ้าน'] }[item.slot] ?? ['ใส่', 'ถอด'];
+          action = equipped ? `<button data-unequip="${item.slot}">${off}</button>` : `<button data-equip="${id}">${on}</button>`;
         }
         else if (item.slot) action = equipped ? '<button disabled>ถืออยู่</button>' : `<button data-equip="${id}">ถือ</button>`;
         return `<div class="row"><span class="icon">${item.icon}</span>

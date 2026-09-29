@@ -1,6 +1,6 @@
 import { EMOTES, ITEMS, NPC_RANGE, TILE } from '/shared/constants.js';
 import { ROOMS, roomSize, tileAt } from '/shared/maps.js';
-import { CHAR_HEAD, HAND_X, HAND_Y, MONSTER_ART } from './art.js';
+import { CHAR_HEAD, HAND_X, HAND_Y, MONSTER_ART, PROP_ART } from './art.js';
 import { TILE_VARIANTS, characterTexture, makeTextures, tileKey } from './textures.js';
 
 export const FONT = '"Mitr", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
@@ -10,6 +10,7 @@ export const DPR = Math.min(3, window.devicePixelRatio || 1);
 const U = DPR;
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
+const PET_SPEED = 5; // tiles per second when catching up with the owner
 const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน', stars: '⭐ สอยดาว', fortune: '🧧 เซียมซี' };
 
 // Text styles are given in CSS pixels.
@@ -199,8 +200,11 @@ export class WorldScene extends Phaser.Scene {
         ent.texKey = characterTexture(this, e.look, e.body, e.head);
         ent.body = this.add.image(0, 0, `${ent.texKey}_0`).setOrigin(0.5, 1).setScale(S);
         ent.weapon = this.add.image(HAND_X * S, HAND_Y * S, 'shadow').setOrigin(0.5, 0.3).setScale(S);
-        ent.rig.add([ent.body, ent.weapon]);
+        ent.prop = this.add.image(-HAND_X * S, HAND_Y * S, 'shadow').setScale(S);
+        ent.rig.add([ent.body, ent.weapon, ent.prop]);
         this.setWeapon(ent, e.weapon);
+        this.setProp(ent, e.prop);
+        this.setPet(ent, e.pet);
         ent.headY = -CHAR_HEAD * S;
       }
       c.add(ent.rig);
@@ -240,6 +244,58 @@ export class WorldScene extends Phaser.Scene {
     if (ok) ent.weapon.setTexture(`weapon_${weapon}`);
   }
 
+  // Prop in the other hand, hanging from (or held at) its grip point.
+  setProp(ent, prop) {
+    if (!ent.prop) return;
+    const art = PROP_ART[prop];
+    ent.prop.setVisible(!!art);
+    if (art) ent.prop.setTexture(`prop_${prop}`).setOrigin(0.5, art.oy);
+  }
+
+  // The pet is its own object so it can trail behind its owner.
+  setPet(ent, pet) {
+    ent.pet?.c.destroy();
+    ent.pet = null;
+    if (!pet || !this.textures.exists(`${pet}_0`)) return;
+    const { S } = this;
+    const body = this.add.image(0, 0, `${pet}_0`).setOrigin(0.5, 1).setScale(S);
+    const c = this.add.container(0, 0, [this.add.image(0, 0, 'shadow').setScale(S * 0.6), body]);
+    ent.pet = { type: pet, c, body, x: ent.x - 0.8, y: ent.y + 0.15, frame: 0, frameAt: 0 };
+    this.placePet(ent.pet);
+  }
+
+  placePet(pt) {
+    const y = this.feetY(pt.y);
+    pt.c.setPosition(this.px(pt.x), y).setDepth(y - 1);
+  }
+
+  followPet(ent, time, dt) {
+    const pt = ent.pet;
+    const gx = ent.x - (ent.data.dir || 1) * 0.8;
+    const gy = ent.y + 0.15;
+    const dx = gx - pt.x;
+    const dy = gy - pt.y;
+    const d = Math.hypot(dx, dy);
+    if (d > 5) {
+      pt.x = gx;
+      pt.y = gy;
+    } else if (d > 0.05) {
+      const step = Math.min(d, dt * PET_SPEED * (d > 1.5 ? 1.6 : 1));
+      pt.x += (dx / d) * step;
+      pt.y += (dy / d) * step;
+    }
+    if (Math.abs(dx) > 0.05) pt.body.setFlipX(dx < 0);
+    if (d > 0.1 && time - pt.frameAt > WALK_FRAME_MS) {
+      pt.frame ^= 1;
+      pt.frameAt = time;
+      pt.body.setTexture(`${pt.type}_${pt.frame}`);
+    } else if (d <= 0.1 && pt.frame) {
+      pt.frame = 0;
+      pt.body.setTexture(`${pt.type}_0`);
+    }
+    this.placePet(pt);
+  }
+
   setDir(ent, dir) {
     if (!dir || !ent.body) return;
     ent.data.dir = dir;
@@ -249,6 +305,8 @@ export class WorldScene extends Phaser.Scene {
     if (ent.weapon) {
       ent.weapon.setFlipX(left);
       ent.weapon.x = (left ? -HAND_X : HAND_X) * this.S;
+      ent.prop.setFlipX(left);
+      ent.prop.x = (left ? HAND_X : -HAND_X) * this.S;
     }
   }
 
@@ -277,6 +335,7 @@ export class WorldScene extends Phaser.Scene {
     if (!ent) return;
     this.ents.delete(id);
     ent.bubble?.destroy();
+    ent.pet?.c.destroy();
     if (instant || !this.fx) ent.c.destroy();
     else this.tweens.add({ targets: ent.c, alpha: 0, duration: 250, onComplete: () => ent.c.destroy() });
     if (this.targetId === id) this.targetId = null;
@@ -384,13 +443,16 @@ export class WorldScene extends Phaser.Scene {
     this.tweens.add({ targets: ring, scaleX: 8, scaleY: 8, alpha: 0, duration: 700, onComplete: () => ring.destroy() });
   }
 
-  onLook({ id, body, head, weapon }) {
+  onLook({ id, body, head, weapon, prop, pet }) {
     const ent = this.ents.get(id);
     if (!ent || ent.data.k !== 'p') return;
-    Object.assign(ent.data, { body, head, weapon });
+    const petChanged = pet !== ent.data.pet;
+    Object.assign(ent.data, { body, head, weapon, prop, pet });
     ent.texKey = characterTexture(this, ent.data.look, body, head);
     ent.body.setTexture(`${ent.texKey}_${ent.frame}`);
     this.setWeapon(ent, weapon);
+    this.setProp(ent, prop);
+    if (petChanged) this.setPet(ent, pet);
     this.floatText(id, '✨', '#ffffff', 18);
   }
 
@@ -610,6 +672,7 @@ export class WorldScene extends Phaser.Scene {
         if (ent.body.texture.key !== key) ent.body.setTexture(key);
       }
       this.placeEntity(ent);
+      if (ent.pet) this.followPet(ent, time, dt);
       if (ent.bubble) ent.bubble.setPosition(ent.c.x, ent.c.y + ent.headY - 20 * U);
     }
 

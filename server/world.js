@@ -293,8 +293,8 @@ export class World {
   }
 
   broadcastLook(p, room) {
-    const { body, head, weapon } = p.profile.equip;
-    room.broadcast({ t: 'look', id: p.id, body, head, weapon });
+    const { body, head, weapon, prop, pet } = p.profile.equip;
+    room.broadcast({ t: 'look', id: p.id, body, head, weapon, prop, pet });
   }
 }
 
