@@ -33,7 +33,11 @@ const THEMES = {
   alley: { wall: '#5a5d66', mortar: '#40424a', floor: '#a3a7ab', floorLine: '#83878c' },
   canal: { wall: '#5b4a3a', mortar: '#46382b', floor: '#c9b48a', floorLine: '#a8936a' },
   suburb: { wall: '#4a4f57', mortar: '#3a3e45', floor: '#b8a27a', floorLine: '#9a855f' },
+  // Night at the temple fair: dark red walls, lamp-lit stone.
+  fair: { wall: '#6a2a2a', mortar: '#4a1c1c', floor: '#8a7a74', floorLine: '#6a5c58' },
 };
+
+const BULBS = ['#ffe066', '#ff6b8b', '#6dff8a', '#7cc7ff', '#ffb020'];
 
 // Draw one 32x32 tile variant. `v` picks a noise seed so floors don't look tiled.
 function drawTile(ctx, ch, theme, v) {
@@ -251,6 +255,110 @@ function drawTile(ctx, ch, theme, v) {
       ctx.fillStyle = '#2e5c78';
       for (let i = 0; i < 3; i++) ctx.fillRect(6 + ((i * 13 + v * 5) % 20), 8 + i * 9, 7, 1);
       break;
+    case 'F':
+      // ซุ้มงานวัด: string of coloured bulbs over a shelf of prizes.
+      fill('#2c2226');
+      fill('#3a2a30', 0, 6, S, 26);
+      for (let x = 1; x < S; x += 4) {
+        const c = BULBS[((x >> 2) + v) % BULBS.length];
+        fill('#1f1a24', x - 1, 1, 4, 1);
+        fill(shade(c, 0.45), x - 1, 2, 3, 3);
+        fill(c, x, 2, 1, 2);
+      }
+      for (const y of [16, 29]) {
+        fill('#8b5a33', 0, y, S, 2);
+        fill('#6b4226', 0, y + 2, S, 1);
+      }
+      for (let k = 0; k < 4; k++) {
+        const c = BULBS[(k * 2 + v) % BULBS.length];
+        const x = 2 + k * 8;
+        // a doll on the top shelf, a bottle on the bottom one
+        fill(OUTLINE, x, 8, 5, 8), fill(c, x + 1, 9, 3, 7), fill('#fff3d6', x + 1, 9, 3, 2), fill(OUTLINE, x + 1, 10, 1, 1), fill(OUTLINE, x + 3, 10, 1, 1);
+        const b = BULBS[(k * 3 + v + 1) % BULBS.length];
+        fill(OUTLINE, x + 1, 20, 3, 9), fill(shade(b, 0.8), x + 2, 23, 1, 6), fill(b, x + 2, 21, 1, 2);
+      }
+      break;
+    case 'C':
+      // เคาน์เตอร์ซุ้ม: wooden counter top over a red skirt with white stripes.
+      fill('#2c2226');
+      fill('#a8703f', 0, 2, S, 4);
+      fill('#c88a50', 0, 2, S, 1);
+      fill('#6b4226', 0, 6, S, 1);
+      fill('#d94f4f', 0, 7, S, 21);
+      for (let x = 0; x < S; x += 8) fill('#fff3d6', x + 2, 7, 4, 21), fill('#e8dcc0', x + 5, 7, 1, 21);
+      fill('#b0342b', 0, 26, S, 2);
+      fill('rgba(0,0,0,0.3)', 0, 28, S, 4);
+      if (v === 1) fill(OUTLINE, 12, 0, 7, 3), fill('#ffe066', 13, 0, 5, 2); // a tin of tickets
+      break;
+    case 'R':
+      // หลังคาศาลเจ้า: green-glazed tiles above a gold eave.
+      fill('#205a36');
+      for (let y = 0; y < 22; y += 5) {
+        for (let x = (y / 5) % 2 ? 2 : 0; x < S; x += 4) fill('#3f9a5e', x, y, 3, 4), fill('#5fc07e', x, y, 1, 1);
+      }
+      fill('#ffd23f', 0, 22, S, 3);
+      fill('#c99a1a', 0, 25, S, 1);
+      fill('#8a2323', 0, 26, S, 6);
+      for (let x = 2; x < S; x += 8) fill('#ffd23f', x, 27, 4, 2);
+      break;
+    case 'S':
+      // ผนังศาลเจ้า: red wall and pillars; a door, a lantern or a gold plaque.
+      fill('#8a2323');
+      speckle(ctx, rnd, ['#7a1e1e', '#962a2a'], 30);
+      fill('#6a1a1a', 1, 0, 4, S), fill('#6a1a1a', 27, 0, 4, S);
+      fill('#a83232', 2, 0, 1, S), fill('#a83232', 28, 0, 1, S);
+      if (v === 0) fill(OUTLINE, 10, 6, 12, 26), fill('#4a1212', 11, 7, 10, 25), fill('#ffd23f', 15, 18, 2, 2), fill('#6a1a1a', 16, 7, 1, 25);
+      if (v === 1) {
+        fill('#4a1212', 15, 0, 2, 5);
+        fill(OUTLINE, 10, 5, 12, 14), fill('#e0453a', 11, 6, 10, 12), fill('#ff8a7a', 12, 7, 2, 9);
+        fill('#ffd23f', 11, 5, 10, 1), fill('#ffd23f', 11, 18, 10, 1), fill('#ffd23f', 15, 19, 2, 4);
+      }
+      if (v === 2) fill(OUTLINE, 9, 8, 14, 12), fill('#ffd23f', 10, 9, 12, 10), fill('#c99a1a', 12, 11, 8, 1), fill('#c99a1a', 12, 14, 8, 1), fill('#c99a1a', 12, 17, 8, 1);
+      break;
+    case 'J':
+      // โต๊ะธูป: red altar table with a gold incense pot and smoke.
+      fill(t.floor);
+      speckle(ctx, rnd, [shade(t.floor, 0.9), shade(t.floor, 1.08)], 30);
+      fill(OUTLINE, 1, 10, 30, 16);
+      fill('#b0342b', 2, 11, 28, 14);
+      fill('#ffd23f', 2, 11, 28, 2);
+      fill('#7a2020', 2, 22, 28, 3);
+      fill('#4a1212', 4, 26, 3, 5), fill('#4a1212', 25, 26, 3, 5);
+      if (v !== 1) {
+        fill(OUTLINE, 11, 4, 10, 8), fill('#e0a040', 12, 5, 8, 6), fill('#ffd23f', 12, 5, 8, 1);
+        for (const x of [13, 16, 18]) fill('#8a3a2a', x, 0, 1, 5), fill('#ff6b3b', x, 0, 1, 1);
+        fill('rgba(255,255,255,0.35)', 14, 0, 1, 2), fill('rgba(255,255,255,0.3)', 17, 1, 1, 2);
+      } else {
+        // offerings: fruit and flowers
+        fill('#ff8a3a', 6, 7, 5, 4), fill('#ffd23f', 13, 6, 6, 5), fill('#6fbf4a', 21, 7, 5, 4);
+        fill(OUTLINE, 6, 11, 20, 1);
+      }
+      break;
+    case 'l':
+      // เสาโคมไฟ: wooden pole with a glowing red lantern.
+      fill(t.floor);
+      speckle(ctx, rnd, [shade(t.floor, 0.9), shade(t.floor, 1.08)], 30);
+      fill('rgba(255,120,80,0.18)', 4, 0, 24, 20);
+      fill('rgba(255,120,80,0.14)', 8, 20, 16, 8);
+      fill('rgba(0,0,0,0.25)', 11, 29, 10, 3);
+      fill('#4a2c18', 15, 12, 3, 19);
+      fill(OUTLINE, 9, 2, 14, 12);
+      fill('#e0453a', 10, 3, 12, 10);
+      fill('#ff8a7a', 11, 4, 3, 7);
+      fill('#ffe066', 14, 6, 4, 4);
+      fill('#ffd23f', 10, 2, 12, 1), fill('#ffd23f', 10, 13, 12, 1);
+      break;
+    case 'D':
+      // เวทีงานวัด: bright stage planks with a neon edge.
+      fill('#9a6a3c');
+      for (let y = 0; y < S; y += 8) {
+        fill('#b88048', 0, y, S, 1);
+        fill('#7a5230', 0, y + 7, S, 1);
+        fill('#7a5230', ((y / 8) * 11 + v * 5) % S, y + 1, 1, 6);
+      }
+      speckle(ctx, rnd, ['#fff3d6', '#ffe066'], 4);
+      if (v === 2) fill('#ff6b8b', 0, 0, S, 1), fill('#6dff8a', 0, 1, S, 1);
+      break;
     case 'P':
       // Portal: glowing violet whirl.
       fill('#6a3fa6');
@@ -275,7 +383,7 @@ export function tileKey(ch, theme, v) {
 export function makeTextures(scene) {
   const tex = scene.textures;
   for (const theme of Object.keys(THEMES)) {
-    for (const ch of '.,=#ATtBKN~PWsHGr') {
+    for (const ch of '.,=#ATtBKN~PWsHGrFCRSJlD') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
         const c = canvas(TILE, TILE);
         drawTile(c.getContext('2d'), ch, theme, v);

@@ -19,6 +19,13 @@ export const TILES = {
   'H': { name: 'stilt house', block: true }, // บ้านริมน้ำ
   'G': { name: 'warehouse', block: true }, // โกดังสังกะสี
   'r': { name: 'rice field' }, // นาข้าว
+  'F': { name: 'fair booth shelf', block: true }, // ชั้นวางของรางวัลในซุ้มงานวัด
+  'C': { name: 'booth counter', block: true }, // เคาน์เตอร์ซุ้ม
+  'R': { name: 'shrine roof', block: true }, // หลังคาศาลเจ้า
+  'S': { name: 'shrine wall', block: true }, // ผนังศาลเจ้า
+  'J': { name: 'incense altar', block: true }, // โต๊ะธูปหน้าศาลเจ้า
+  'l': { name: 'lantern post', block: true }, // เสาโคมไฟ
+  'D': { name: 'stage' }, // เวทีงานวัด
 };
 
 export const ROOMS = {
@@ -38,8 +45,8 @@ export const ROOMS = {
       '#..TT......,,,,,,,,,.......KK..#',
       '#..........,.......,...........#',
       '#..........,..ttt..,...........#',
-      '#..........,..ttt..,...........P',
-      '#..........,.......,...........P',
+      'P..........,..ttt..,...........P',
+      'P..........,.......,...........P',
       '#..........,,,,,,,,,...........#',
       '#..BB..........................#',
       '#..............................#',
@@ -48,6 +55,7 @@ export const ROOMS = {
     ],
     portals: [
       { x: 31, y: 8, w: 1, h: 2, to: 'alley', tx: 1, ty: 6, label: 'ซอยแคบหลังตลาด →' },
+      { x: 0, y: 8, w: 1, h: 2, to: 'fair', tx: 32, ty: 7, label: '← ซุ้มงานวัด' },
     ],
     npcs: [
       { id: 'npc_cafe', kind: 'cafe', name: 'ป้าศรี ร้านกาแฟโบราณ', x: 3, y: 2, look: { skin: '#e0ac7e', hair: '#d9d9d9', shirt: '#b0463c' } },
@@ -174,6 +182,46 @@ export const ROOMS = {
       // The world boss only appears on the WORLD_BOSS timetable.
       { type: 'sidecar', count: 1, scheduled: true, area: { x1: 33, y1: 7, x2: 43, y2: 10 } },
     ],
+  },
+
+  fair: {
+    id: 'fair',
+    name: 'ซุ้มงานวัด & หน้าศาลเจ้า',
+    subtitle: 'Safe Zone · งานวัด',
+    safe: true,
+    theme: 'fair',
+    spawn: { x: 31, y: 7 },
+    tiles: [
+      '##################################',
+      '#AAAAAAAA##RRRRRRRRRRRR##AAAAAAAA#',
+      '#FFFFFFFF..SSSSSSSSSSSS..FFFFFFFF#',
+      '#CCCCCCCC..SSSSSSSSSSSS..CCCCCCCC#',
+      '#..............JJJJ..............#',
+      '#.........l............l.........#',
+      '#................................#',
+      '#...........,,,,,,...............P',
+      '#...........,,,,,,...............P',
+      '#....l.................DDDDDDDDDD#',
+      '#.................l....DDDDDDDDDD#',
+      '#......................DDDDDDDDDD#',
+      '#,,,,..................DDDDDDDDDD#',
+      '#,,,,.....l............DDDDDDDDDD#',
+      '#tt,,..................DDDDDDDDDD#',
+      '##################################',
+    ],
+    portals: [
+      { x: 33, y: 7, w: 1, h: 2, to: 'market', tx: 1, ty: 8, label: 'ตลาด →' },
+    ],
+    npcs: [
+      { id: 'npc_dj', kind: 'dj', name: 'ดีเจโจ้ เวทีงานวัด', x: 28, y: 9, look: { skin: '#c68b5e', hair: '#1b1b2a', shirt: '#f07ab0' } },
+    ],
+    objects: [
+      { id: 'obj_stars', kind: 'stars', name: 'ซุ้มสอยดาว', x: 6, y: 3, w: 3, h: 1 },
+      { id: 'obj_fortune', kind: 'fortune', name: 'โต๊ะเซียมซีหน้าศาลเจ้า', x: 15, y: 4, w: 4, h: 1 },
+    ],
+    // Players standing here take part in the dance-off.
+    stage: { x1: 23, y1: 9, x2: 32, y2: 14 },
+    spawns: [],
   },
 };
 

@@ -44,6 +44,7 @@
       <div class="bar hp"><div id="hp-fill"></div><span id="hp-text"></span></div>
       <div class="bar exp"><div id="exp-fill"></div><span id="exp-text"></span></div>
       <div class="wallet">🪙 <b id="coins">0</b> <span class="sep">·</span> 🥫 <b id="junk">0</b></div>
+      <div id="buff" hidden></div>
       <div id="party-list" hidden></div>
     </div>
 
@@ -70,6 +71,12 @@
     </div>
 
     <div id="toasts"></div>
+
+    <div id="stage-call" aria-live="assertive" hidden>
+      <small id="stage-step"></small>
+      <b id="stage-move"></b>
+      <div class="timer"><div id="stage-timer"></div></div>
+    </div>
 
     <div id="party-invite" role="dialog" aria-live="polite" hidden>
       <p>👥 <b id="party-invite-from"></b> ชวนเข้าปาร์ตี้</p>
@@ -105,6 +112,34 @@
         <p>จับคู่ครบ! ได้ 🪙 <b id="mg-reward">0</b></p>
         <button id="mg-again">เล่นอีกตา</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ซุ้มสอยดาว: close-up star board -->
+  <div id="stars" hidden>
+    <div class="closeup-inner">
+      <header>
+        <h2>⭐ ซุ้มสอยดาว · ดวงละ 🪙 <span id="stars-price"></span></h2>
+        <button id="stars-close" aria-label="ปิด">✕</button>
+      </header>
+      <div class="board"><div id="stars-grid"></div></div>
+      <footer>
+        <span>🪙 <b id="stars-coins">0</b></span>
+        <span id="stars-status">เลือกดาวที่ชอบ แล้วลุ้นรางวัล!</span>
+        <button id="stars-reset" type="button">ขึ้นแผงใหม่</button>
+      </footer>
+      <p class="stars-prizes" id="stars-prizes"></p>
+    </div>
+  </div>
+
+  <!-- เซียมซี result -->
+  <div id="fortune" hidden>
+    <div class="recovery-box" role="dialog" aria-labelledby="fortune-title">
+      <div class="fortune-stick">🧧</div>
+      <h2 id="fortune-title"></h2>
+      <p id="fortune-text" class="fortune-text"></p>
+      <p id="fortune-buff" class="warn"></p>
+      <div class="recovery-actions"><button id="fortune-ok" type="button">สาธุ 🙏</button></div>
     </div>
   </div>
 

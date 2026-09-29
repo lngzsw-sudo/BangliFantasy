@@ -1,12 +1,13 @@
 import {
   CHAT_COOLDOWN_MS, CHAT_MAX, EMOTES, FASHION_SLOTS, ITEMS, NAME_RE, NPC_RANGE, PLAYER_SPEED, RECIPES, RESPAWN_ROOM, SHOPS,
-  TICK_MS, WORLD_BOSS, newProfile, playerStats,
+  STARS, TICK_MS, WORLD_BOSS, newProfile, playerStats,
 } from '../shared/constants.js';
 import { ROOMS } from '../shared/maps.js';
 import { MemoryMatch } from './minigame.js';
 import { GameRoom, dist, newId, selfView } from './room.js';
 import { claimBounty } from './bounty.js';
 import { Parties } from './party.js';
+import { drawFortune, pickStar } from './fair.js';
 import {
   LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
   newSessionToken, normalizeRecoveryCode, verifyPassword,
@@ -323,9 +324,27 @@ const HANDLERS = {
     room.broadcast({ t: 'chat', id: p.id, name: p.profile.name, text });
   },
 
-  emote(p, room, { e }) {
+  emote(p, room, { e }, now) {
     if (!Object.hasOwn(EMOTES, e) || p.dead) return;
     room.broadcast({ t: 'emote', id: p.id, e });
+    room.stage?.onEmote(p, e, now);
+  },
+
+  // ซุ้มสอยดาว: `i` is only which star the player tapped; the prize is rolled here.
+  stars_pick(p, room, { i }) {
+    if (!Number.isInteger(i) || i < 0 || i >= STARS.count || !this.nearObject(p, room, 'stars')) return;
+    const res = pickStar(p.profile, this.rng);
+    if (res.error) return p.send({ t: 'toast', text: res.error });
+    p.profileDirty = true;
+    p.send({ t: 'stars', i, ...res });
+    if (res.rare && res.item) room.broadcast({ t: 'sys', text: `⭐ ${p.profile.name} สอยได้ ${res.text}!` });
+  },
+
+  fortune_draw(p, room, msg, now) {
+    if (!this.nearObject(p, room, 'fortune')) return;
+    const f = drawFortune(p.profile, now, this.rng);
+    p.profileDirty = true;
+    p.send({ t: 'fortune', ...f });
   },
 
   auto(p, room, { on, pct }) {
