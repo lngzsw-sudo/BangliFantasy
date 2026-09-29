@@ -105,6 +105,24 @@ starts with `blfs_`, so it can share a database with other apps.
   bot runs on the server, so it keeps farming while the tab is in the background.
 - EXP from a monster drops once you out-level it by more than 3, so each area
   eventually stops being worth farming.
+- **🏮 ซุ้มงานวัด & หน้าศาลเจ้า** (room 05, through the west exit of the market) is a
+  night-time temple fair with no monsters:
+  - **⭐ สอยดาว booth:** 50 coins per star on a 12-star close-up board. Prizes
+    are coins, drinks, junk, or one of two fashion items you can only get here:
+    the **lion-dance head** (5%) and the **flower-print temple-fair shirt** (3%).
+    If you draw one you already own, you get 250 coins instead. On average it
+    pays back less than it costs, so it drains coins from the economy.
+  - **🧧 เซียมซี at the shrine altar:** one stick a day (Bangkok time) with a
+    fortune and a buff until midnight: +20% EXP from kills, +20% coins dropped,
+    +25% chance of material drops, or +30% HP from drinks. It shows under your HP bar.
+  - **🎤 Dance-off stage:**
+    - Whenever someone is on the stage, DJ Jo starts a round, then another
+      every 45 s.
+    - The DJ calls 5 emotes, one at a time, and you have 4 s to do each one.
+      The emote menu opens by itself while you're on stage. Only your first
+      emote per call counts.
+    - The best dancer (at least 3/5) wins 120 coins; everyone else gets 10
+      coins per point.
 - **👥 Parties** (up to 5 players). The leader invites people by name, or picks
   someone from the "nearby" list in the 👥 panel, and they accept from a pop-up.
   Members show with green names and HP bars, and in a list under your
@@ -148,9 +166,10 @@ chance to block a hit.
 
 Added after the MVP: the alley's pigeons and stray dogs, the daily bounty
 board, a hat slot, room 03 (the canal) with its miniboss, and room 04 (the
-suburbs) with the timed world boss, and parties.
+suburbs) with the timed world boss, parties, and room 05 (the temple fair) with
+สอยดาว, เซียมซี and the dance-off stage.
 
-Not built yet: room 05, prop/pet slots, and the 1v1 board games.
+Not built yet: prop/pet slots and the 1v1 board games.
 
 ## Architecture
 
@@ -162,6 +181,7 @@ client/            static, no build step: served as ES modules
   src/WorldScene.js  map rendering, interpolation, input -> intents
   src/ui.js        HUD / shop / tailor / bag panels
   src/minigame.js  close-up card-matching overlay
+  src/fair.js      temple fair: สอยดาว board, เซียมซี card, dance-off calls
   src/art.js       pixel art as ASCII data (characters, monsters, drops, weapons)
   src/textures.js  turns art + procedural tiles into Phaser textures at runtime
 shared/            imported by both server and browser
@@ -175,6 +195,7 @@ server/
   combat.js        damage roll, EXP/level-up, EXP falloff
   bounty.js        daily bounty progress and claims
   party.js         party invites, membership, party chat and member sync
+  fair.js          temple fair: fortunes and their buffs, สอยดาว prizes, dance-off stage
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)
@@ -232,11 +253,12 @@ needed.
 Client → server: `hello {mode: login|register|session|recover, name, password?, remember?, session?, code?}`, `logout {session}`, `recovery_new {password}`, `move {x,y}`, `attack {id}`, `chat {text}`,
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `bounty_claim {id}`, `party_invite {name}`, `party_accept {from}`,
-`party_decline {from}`, `party_leave`, `party_kick {name}`, `mg_open`, `mg_flip {i}`, `mg_close`, `ping`.
+`party_decline {from}`, `party_leave`, `party_kick {name}`, `stars_pick {i}`, `fortune_draw`, `mg_open`, `mg_flip {i}`,
+`mg_close`, `ping`.
 `chat {text, party: true}` goes to your party only.
 
 Server → client: `welcome`, `room` (full room state), `join`/`leave`,
 `s` (delta snapshot `[id, x, y, hp, dir]`), `hit`, `die`, `gone`, `lvl`, `look`,
 `chat`, `emote`, `fx`, `me` (your private profile), `auto`, `toast`, `sys`,
 `announce` (server-wide, e.g. the world boss), `party` (member list, or `null`), `party_invite`,
-`mg`, `error`.
+`stars` (prize), `fortune`, `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.

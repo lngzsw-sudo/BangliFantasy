@@ -6,6 +6,7 @@ import { buildBlockedGrid, portalAt, roomSize, tileAt } from '../shared/maps.js'
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
 import { recordKill, bountyView } from './bounty.js';
 import { addExp, killExp, randInt, rollDamage } from './combat.js';
+import { DanceStage, activeFortune, buffBonus } from './fair.js';
 
 let nextId = 1;
 export const newId = (prefix) => `${prefix}${nextId++}`;
@@ -59,6 +60,7 @@ export class GameRoom {
     this.monsters = new Map();
     this.drops = new Map();
     this.respawns = [];
+    if (def.stage) this.stage = new DanceStage(this, def.stage, rng);
     for (const spawn of def.spawns) {
       if (spawn.scheduled) this.worldBoss = { spawn, nextAt: 0, warned: false, mob: null, leaveAt: 0 };
       else for (let i = 0; i < spawn.count; i++) this.spawnMonster(spawn);
@@ -143,7 +145,7 @@ export class GameRoom {
     item ??= pickPotion(p);
     if (p.dead || !item || !ITEMS[item]?.heal || !(p.profile.inv[item] > 0)) return false;
     if (now < (p.potionReadyAt ?? 0)) return false;
-    const heal = Math.min(ITEMS[item].heal, p.stats.maxHp - p.hp);
+    const heal = Math.min(Math.round(ITEMS[item].heal * (1 + buffBonus(p.profile, now, 'heal'))), p.stats.maxHp - p.hp);
     p.profile.inv[item]--;
     p.potionReadyAt = now + POTION_COOLDOWN_MS;
     p.hp += heal;
@@ -211,10 +213,12 @@ export class GameRoom {
     // Bosses reward everyone who pulled their weight; others only the killer.
     const winners = m.def.shareLoot ? this.bossWinners(m, killer) : [killer];
     const at = tileOf(m);
+    // เซียมซี buffs: more coins, better drop chances, more EXP.
     for (const w of winners) {
-      this.spawnDrop('coin', randInt(this.rng, m.def.coins), at, w, now);
+      this.spawnDrop('coin', Math.round(randInt(this.rng, m.def.coins) * (1 + buffBonus(w.profile, now, 'coins'))), at, w, now);
+      const luck = 1 + buffBonus(w.profile, now, 'drop');
       for (const d of m.def.drops) {
-        if (this.rng() < d.chance) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, w, now);
+        if (this.rng() < d.chance * luck) this.spawnDrop(d.item, randInt(this.rng, d.amount), at, w, now);
       }
     }
     // Boss winners each get full EXP. Other kills split the EXP (plus a bonus)
@@ -222,7 +226,8 @@ export class GameRoom {
     const earners = m.def.shareLoot ? winners : this.partyNearby(killer, m);
     const share = m.def.shareLoot ? 1 : (1 + PARTY.bonus * (earners.length - 1)) / earners.length;
     for (const w of earners) {
-      this.grantExp(w, Math.round(killExp(m.def.exp, m.def.level, w.profile.level) * share));
+      const bonus = 1 + buffBonus(w.profile, now, 'exp');
+      this.grantExp(w, Math.round(killExp(m.def.exp, m.def.level, w.profile.level) * share * bonus));
       for (const b of recordKill(w.profile, m.type, now)) {
         w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
       }
@@ -321,6 +326,7 @@ export class GameRoom {
 
   tick(now, dt) {
     if (this.worldBoss) this.tickWorldBoss(now);
+    this.stage?.tick(now);
     for (let i = this.respawns.length - 1; i >= 0; i--) {
       if (now >= this.respawns[i].at) {
         this.spawnMonster(this.respawns[i].spawn);
@@ -662,6 +668,7 @@ export function selfView(p, now) {
   return {
     id: p.id, name, level, exp, coins, inv, equip, stats: p.stats, hp: Math.round(p.hp), auto: p.auto,
     bounty: bountyView(p.profile, now),
+    fortune: activeFortune(p.profile, now),
   };
 }
 

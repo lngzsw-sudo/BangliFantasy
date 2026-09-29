@@ -10,7 +10,7 @@ export const DPR = Math.min(3, window.devicePixelRatio || 1);
 const U = DPR;
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
-const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน' };
+const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน', stars: '⭐ สอยดาว', fortune: '🧧 เซียมซี' };
 
 // Text styles are given in CSS pixels.
 const text = (scene, x, y, str, style = {}) =>
@@ -571,6 +571,8 @@ export class WorldScene extends Phaser.Scene {
     this.pending = null;
     if (p.kind === 'npc') this.ui.openNpc(p.ref);
     else if (p.ref.kind === 'bounty') this.ui.openPanel({ kind: 'bounty' });
+    else if (p.ref.kind === 'stars') this.ui.fair.openStars();
+    else if (p.ref.kind === 'fortune') this.net.send('fortune_draw');
     else this.ui.openMinigame();
   }
 

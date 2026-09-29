@@ -91,6 +91,15 @@ export const ITEMS = {
     name: 'แจ็กเก็ตสายซิ่งงานวัด', icon: '🧥',
     desc: 'ชุดแฟชั่น: แจ็กเก็ตหนังปักไฟ LED ของคนที่ล้มรถพ่วงข้างได้', slot: 'body',
   },
+  // Only from the สอยดาว booth at the temple fair.
+  hat_lion: {
+    name: 'หัวสิงโตเชิด', icon: '🦁',
+    desc: 'หมวกแฟชั่นหายาก: หัวสิงโตเชิดหน้าศาลเจ้า ได้จากซุ้มสอยดาวเท่านั้น', slot: 'head',
+  },
+  shirt_flower: {
+    name: 'เสื้อลายดอกงานวัด', icon: '🌺',
+    desc: 'ชุดแฟชั่นหายาก: เสื้อเชิ้ตลายดอกสีสด ได้จากซุ้มสอยดาวเท่านั้น', slot: 'body',
+  },
 };
 
 // Equipment slots that change how a character looks.
@@ -297,6 +306,52 @@ export const BOT_LEVEL_MARGIN = 2;
 // EXP (split evenly, plus `bonus` per extra member) and its bounty credit,
 // may loot each other's drops, and pool their damage towards boss loot.
 export const PARTY = { max: 5, range: 12, bonus: 0.2, inviteMs: 60_000 };
+
+// ---------- room 05: the temple fair ----------
+
+// ซุ้มสอยดาว: pay for a star, win what's behind it. `w` weights are relative.
+// It pays back less than it costs on average, so it drains coins from the game.
+export const STARS = {
+  price: 50,
+  count: 12,
+  prizes: [
+    { w: 30, coins: 20 },
+    { w: 18, coins: 60 },
+    { w: 6, coins: 150 },
+    { w: 16, item: 'oliang', n: 2 },
+    { w: 12, item: 'chayen', n: 1 },
+    { w: 10, item: 'junk', n: 3 },
+    { w: 5, item: 'hat_lion', n: 1, rare: true },
+    { w: 3, item: 'shirt_flower', n: 1, rare: true },
+  ],
+  duplicateCoins: 250, // a rare fashion item you already own pays this instead
+};
+
+// เซียมซี: one stick a day (Bangkok time) gives a buff until midnight.
+// Stick n reads FORTUNES[(n - 1) % FORTUNES.length].
+export const FORTUNE_STICKS = 28;
+export const FORTUNES = [
+  { buff: 'exp', v: 0.2, text: 'การงานรุ่งเรือง ขยันวันนี้ได้ผลเกินคาด' },
+  { buff: 'coins', v: 0.2, text: 'โชคลาภไหลมาเทมา ค้าขายกำไรงาม' },
+  { buff: 'drop', v: 0.25, text: 'ของหายได้คืน ของที่อยากได้จะวิ่งมาหา' },
+  { buff: 'heal', v: 0.3, text: 'สุขภาพแข็งแรง กินอะไรก็เป็นยา' },
+  { buff: 'exp', v: 0.2, text: 'ผู้ใหญ่เมตตา มีคนชี้ทางให้ก้าวหน้า' },
+  { buff: 'coins', v: 0.2, text: 'เงินทองไม่ขาดมือ มีคนนำโชคมาให้' },
+  { buff: 'drop', v: 0.25, text: 'ดวงเด่นเรื่องสะสม ของดีเข้ากระเป๋า' },
+  { buff: 'heal', v: 0.3, text: 'พักผ่อนพอ ร่างกายฟื้นไว' },
+];
+export const BUFF_LABELS = {
+  exp: 'EXP จากมอนสเตอร์', coins: 'เหรียญที่ดรอป', drop: 'โอกาสดรอปวัตถุดิบ', heal: 'HP จากเครื่องดื่ม',
+};
+
+// เวทีประชันท่าเต้น: every round the DJ calls `calls` emotes, one at a time.
+// Doing the called emote on stage within `windowMs` scores a point. The top
+// scorer(s) with at least `minTop` points win `prizeTop` coins; everyone else
+// gets `perPoint` coins per point.
+export const STAGE = {
+  everyMs: 45_000, leadMs: 3000, calls: 5, windowMs: 4000, gapMs: 1200,
+  prizeTop: 120, perPoint: 10, minTop: 3,
+};
 
 // Daily Bounty Board (GDD §2 Room 01). Everyone sees the same bounties each
 // day, picked from this pool by date; progress resets at midnight (Bangkok).

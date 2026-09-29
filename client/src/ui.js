@@ -1,5 +1,6 @@
-import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, WEAPONS, expToNext } from '/shared/constants.js';
+import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, WEAPONS, expToNext } from '/shared/constants.js';
 import { ROOMS } from '/shared/maps.js';
+import { Fair } from './fair.js';
 import { Minigame } from './minigame.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -18,6 +19,7 @@ export class UI {
     this.partyIds = new Set();
     this.invites = []; // names of players who invited us, newest last
     this.minigame = new Minigame(net, this);
+    this.fair = new Fair(net, this);
     this.bindHud();
     this.bindChat();
     net.on('me', (m) => this.setMe(m.me));
@@ -106,6 +108,8 @@ export class UI {
     $('#exp-text').textContent = `EXP ${me.exp}/${need}`;
     this.drawHp();
     this.setAuto(me.auto);
+    this.fair.showBuff(me.fortune);
+    this.fair.updateCoins();
     if (this.panel) this.renderPanel();
   }
 
@@ -306,6 +310,19 @@ export class UI {
       });
     } else if (p.kind === 'party') {
       this.renderPartyPanel(title, body);
+    } else if (p.kind === 'dj') {
+      title.textContent = `🎤 ${p.npc.name}`;
+      const res = this.fair.results;
+      const last = res?.length
+        ? res.map((r) => `<div class="row"><span class="icon">${r.win ? '🏆' : '👏'}</span>
+            <span class="info"><b>${esc(r.name)}</b><small>${r.score}/${STAGE.calls} ท่า · 🪙 ${r.coins}</small></span></div>`).join('')
+        : '<p class="npc-say">รอบที่แล้วยังไม่มีใครได้แต้ม</p>';
+      body.innerHTML = `
+        <p class="npc-say">“ขึ้นเวทีมาเลย! ดีเจจะเรียกท่าทีละท่า ทำตามให้ทันภายใน ${STAGE.windowMs / 1000} วินาที”</p>
+        <p class="party-hint">รอบละ ${STAGE.calls} ท่า เริ่มทุก ${STAGE.everyMs / 1000} วินาทีเมื่อมีคนอยู่บนเวที ·
+          ใช้ปุ่ม 😄 ท่าทาง (เวลาอยู่บนเวทีเมนูท่าทางจะเปิดให้เอง) · ท่าแรกที่ทำในแต่ละรอบเรียกเท่านั้นที่นับ ·
+          คนได้แต้มสูงสุด (อย่างน้อย ${STAGE.minTop} ท่า) รับ 🪙 ${STAGE.prizeTop} คนอื่นได้ท่าละ 🪙 ${STAGE.perPoint}</p>
+        <h3 class="sub">ผลรอบล่าสุด</h3>${last}`;
     } else if (p.kind === 'bounty') {
       title.textContent = '📋 กระดานรับงานชุมชน';
       body.innerHTML = `<p class="npc-say">“ช่วยกันกำจัดตัวป่วนในซอยหลังตลาดหน่อย! งานเปลี่ยนทุกเที่ยงคืน”</p>` +
