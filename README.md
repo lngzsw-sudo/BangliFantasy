@@ -123,6 +123,14 @@ starts with `blfs_`, so it can share a database with other apps.
       emote per call counts.
     - The best dancer (at least 3/5) wins 120 coins; everyone else gets 10
       coins per point.
+- **🛍️ Props and 🐈 pets** (just for looks). Props go in your other hand:
+  - **ถุงโอเลี้ยง:** ป้าศรี, 60 coins.
+  - **พัดลมมือถือ:** เฮียเล้ง, 150 coins.
+  - **ตะกร้าหวาย:** ช่างเจี๊ยบ crafts it from 8 hyacinth stems + 100 coins.
+
+  Pets come from **ป้าแดง's pet booth** at the temple fair and trail behind you
+  wherever you walk: **ไก่แจ้** 350, **แมวส้ม** 500, **หมาไทยหลังอาน** 800.
+  Pick them up or put them away in 🎒.
 - **👥 Parties** (up to 5 players). The leader invites people by name, or picks
   someone from the "nearby" list in the 👥 panel, and they accept from a pop-up.
   Members show with green names and HP bars, and in a list under your
@@ -169,7 +177,9 @@ board, a hat slot, room 03 (the canal) with its miniboss, and room 04 (the
 suburbs) with the timed world boss, parties, and room 05 (the temple fair) with
 สอยดาว, เซียมซี and the dance-off stage.
 
-Not built yet: prop/pet slots and the 1v1 board games.
+Also added: prop and pet slots.
+
+Not built yet: the 1v1 board games.
 
 ## Architecture
 

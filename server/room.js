@@ -648,6 +648,7 @@ export function playerView(p) {
     id: p.id, k: 'p', name: p.profile.name, x: round2(p.x), y: round2(p.y), dir: p.dir,
     hp: Math.max(0, Math.round(p.hp)), maxHp: p.stats.maxHp, lvl: p.profile.level,
     look: p.profile.look, body: p.profile.equip.body, head: p.profile.equip.head, weapon: p.profile.equip.weapon,
+    prop: p.profile.equip.prop ?? undefined, pet: p.profile.equip.pet ?? undefined,
     dead: p.dead || undefined,
   };
 }

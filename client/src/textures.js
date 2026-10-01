@@ -1,6 +1,6 @@
 import { TILE } from '/shared/constants.js';
 import {
-  BODY_OVERLAYS, CHAR_FRAMES, DROP, DROP_ART, HEAD_BOB, MONSTER_ART, OUTLINE, SPRITE, WEAPON_ART,
+  BODY_OVERLAYS, CHAR_FRAMES, DROP, DROP_ART, HEAD_BOB, MONSTER_ART, OUTLINE, PET_ART, PROP_ART, SPRITE, WEAPON_ART,
   characterPalette, paint, shade,
 } from './art.js';
 
@@ -407,6 +407,18 @@ export function makeTextures(scene) {
     const c = canvas(art.rows[0].length, art.rows.length);
     paint(c.getContext('2d'), art.rows, art.palette);
     tex.addCanvas(`weapon_${id}`, c);
+  }
+  for (const [id, art] of Object.entries(PROP_ART)) {
+    const c = canvas(art.rows[0].length, art.rows.length);
+    paint(c.getContext('2d'), art.rows, art.palette);
+    tex.addCanvas(`prop_${id}`, c);
+  }
+  for (const [id, art] of Object.entries(PET_ART)) {
+    art.frames.forEach((rows, i) => {
+      const c = canvas(rows[0].length, rows.length);
+      paint(c.getContext('2d'), rows, art.palette);
+      tex.addCanvas(`${id}_${i}`, c);
+    });
   }
   // Soft oval shadow under feet.
   const sh = canvas(24, 8);

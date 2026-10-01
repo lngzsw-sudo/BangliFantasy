@@ -214,6 +214,7 @@ export const ROOMS = {
     ],
     npcs: [
       { id: 'npc_dj', kind: 'dj', name: 'ดีเจโจ้ เวทีงานวัด', x: 28, y: 9, look: { skin: '#c68b5e', hair: '#1b1b2a', shirt: '#f07ab0' } },
+      { id: 'npc_pets', kind: 'pets', name: 'ป้าแดง ซุ้มสัตว์เลี้ยง', x: 28, y: 4, look: { skin: '#e0ac7e', hair: '#7a4a2a', shirt: '#e0b030' } },
     ],
     objects: [
       { id: 'obj_stars', kind: 'stars', name: 'ซุ้มสอยดาว', x: 6, y: 3, w: 3, h: 1 },

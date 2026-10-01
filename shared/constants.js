@@ -100,15 +100,24 @@ export const ITEMS = {
     name: 'เสื้อลายดอกงานวัด', icon: '🌺',
     desc: 'ชุดแฟชั่นหายาก: เสื้อเชิ้ตลายดอกสีสด ได้จากซุ้มสอยดาวเท่านั้น', slot: 'body',
   },
+  // Props: held in the other hand, just for looks.
+  prop_oliang: { name: 'ถุงโอเลี้ยง', icon: '🛍️', desc: 'พร็อพถือ: โอเลี้ยงใส่ถุงมัดหนังยาง ถือแล้วดูเป็นคนตลาดตัวจริง', slot: 'prop' },
+  prop_fan: { name: 'พัดลมมือถือ', icon: '🌀', desc: 'พร็อพถือ: พัดลมจิ๋วสู้แดดบางลี่', slot: 'prop' },
+  prop_basket: { name: 'ตะกร้าหวาย', icon: '🧺', desc: 'พร็อพถือ: ตะกร้าจ่ายตลาดสานจากก้านผักตบ', slot: 'prop' },
+  // Pets: follow you around, just for looks.
+  pet_chick: { name: 'ไก่แจ้', icon: '🐓', desc: 'สัตว์เลี้ยง: ไก่แจ้ตัวจิ๋ว เดินตามต้อยๆ', slot: 'pet' },
+  pet_cat: { name: 'แมวส้ม', icon: '🐈', desc: 'สัตว์เลี้ยง: แมวส้มจอมกวน ขาประจำตลาด', slot: 'pet' },
+  pet_dog: { name: 'หมาไทยหลังอาน', icon: '🐕', desc: 'สัตว์เลี้ยง: หมาไทยหลังอาน ขนเป็นสันกลางหลัง', slot: 'pet' },
 };
 
 // Equipment slots that change how a character looks.
-export const FASHION_SLOTS = ['body', 'head'];
+export const FASHION_SLOTS = ['body', 'head', 'prop', 'pet'];
 
 // NPC shops: what each NPC sells for coins.
 export const SHOPS = {
-  cafe: { oliang: 10, chayen: 35 },
-  grocery: { spatula: 120, umbrella: 100, broom: 30 },
+  cafe: { oliang: 10, chayen: 35, prop_oliang: 60 },
+  grocery: { spatula: 120, umbrella: 100, broom: 30, prop_fan: 150 },
+  pets: { pet_chick: 350, pet_cat: 500, pet_dog: 800 },
 };
 
 // Grind-to-drip: farmed materials + coins -> fashion.
@@ -119,6 +128,7 @@ export const RECIPES = {
   raincoat: { coins: 300, items: { flood_badge: 1, scale: 4, hyacinth: 5 } },
   hat_scarecrow: { coins: 400, items: { straw: 15 } },
   jacket_racer: { coins: 800, items: { speaker: 1, horn: 3, stinger: 10 } },
+  prop_basket: { coins: 100, items: { hyacinth: 8 } },
 };
 
 export const MONSTERS = {
@@ -437,7 +447,7 @@ export function newProfile(name) {
     coins: 20,
     hp: null, // null = full
     inv: { oliang: 3, broom: 1 },
-    equip: { weapon: 'broom', body: null, head: null },
+    equip: { weapon: 'broom', body: null, head: null, prop: null, pet: null },
     look: lookFromName(name),
     bounty: null, // { day, progress: { id: n }, claimed: [id] }
   };
