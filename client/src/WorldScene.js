@@ -11,7 +11,7 @@ const U = DPR;
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
 const PET_SPEED = 5; // tiles per second when catching up with the owner
-const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน', stars: '⭐ สอยดาว', fortune: '🧧 เซียมซี' };
+const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน', stars: '⭐ สอยดาว', fortune: '🧧 เซียมซี', checkers: '♟️ หมากฮอส' };
 
 // Text styles are given in CSS pixels.
 const text = (scene, x, y, str, style = {}) =>
@@ -635,6 +635,7 @@ export class WorldScene extends Phaser.Scene {
     else if (p.ref.kind === 'bounty') this.ui.openPanel({ kind: 'bounty' });
     else if (p.ref.kind === 'stars') this.ui.fair.openStars();
     else if (p.ref.kind === 'fortune') this.net.send('fortune_draw');
+    else if (p.ref.kind === 'checkers') this.ui.openPanel({ kind: 'checkers' });
     else this.ui.openMinigame();
   }
 

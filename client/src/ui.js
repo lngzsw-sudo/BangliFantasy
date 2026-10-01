@@ -1,5 +1,6 @@
 import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, WEAPONS, expToNext } from '/shared/constants.js';
 import { ROOMS } from '/shared/maps.js';
+import { Checkers } from './checkers.js';
 import { Fair } from './fair.js';
 import { Minigame } from './minigame.js';
 
@@ -20,6 +21,7 @@ export class UI {
     this.invites = []; // names of players who invited us, newest last
     this.minigame = new Minigame(net, this);
     this.fair = new Fair(net, this);
+    this.checkers = new Checkers(net, this);
     this.bindHud();
     this.bindChat();
     net.on('me', (m) => this.setMe(m.me));
@@ -315,6 +317,11 @@ export class UI {
       });
     } else if (p.kind === 'party') {
       this.renderPartyPanel(title, body);
+    } else if (p.kind === 'checkers') {
+      const nearby = [...(this.scene?.ents.values() ?? [])]
+        .filter((e) => e.data.k === 'p' && e.data.id !== me.id)
+        .map((e) => ({ name: e.data.name, lvl: e.data.lvl }));
+      this.checkers.renderPanel(title, body, me, nearby, esc);
     } else if (p.kind === 'dj') {
       title.textContent = `🎤 ${p.npc.name}`;
       const res = this.fair.results;

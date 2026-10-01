@@ -8,6 +8,7 @@ import { GameRoom, dist, newId, selfView } from './room.js';
 import { claimBounty } from './bounty.js';
 import { Parties } from './party.js';
 import { drawFortune, pickStar } from './fair.js';
+import { CheckersHall } from './checkers.js';
 import {
   LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
   newSessionToken, normalizeRecoveryCode, verifyPassword,
@@ -38,6 +39,7 @@ export class World {
     this.saving = new Map(); // lower-case name -> pending write
     this.limiter = new LoginLimiter({ now });
     this.parties = new Parties(this);
+    this.checkers = new CheckersHall(this);
     this.lastPartySync = now();
     this.lastTick = now();
     this.lastSave = now();
@@ -59,6 +61,7 @@ export class World {
     const dt = Math.min(0.5, (now - this.lastTick) / 1000);
     this.lastTick = now;
     for (const room of this.rooms.values()) room.tick(now, dt);
+    this.checkers.tick(now);
     if (now - this.lastPartySync >= PARTY_SYNC_MS) {
       this.lastPartySync = now;
       this.parties.tick();
@@ -203,6 +206,7 @@ export class World {
     conn.player = null;
     this.rooms.get(p.roomId)?.removePlayer(p);
     this.parties.leave(p);
+    this.checkers.leave(p);
     this.save(p);
     if (this.online.get(p.key) === p) this.online.delete(p.key);
   }
@@ -457,6 +461,31 @@ const HANDLERS = {
 
   party_kick(p, room, { name }) {
     this.parties.kick(p, name);
+  },
+
+  // หมากฮอส: start at the market table; accepting a challenge works anywhere.
+  ck_bot(p, room, msg, now) {
+    if (this.nearObject(p, room, 'checkers')) this.checkers.playBot(p, now);
+  },
+
+  ck_challenge(p, room, { name }, now) {
+    if (this.nearObject(p, room, 'checkers')) this.checkers.challenge(p, name, now);
+  },
+
+  ck_accept(p, room, { from }, now) {
+    this.checkers.accept(p, from, now);
+  },
+
+  ck_decline(p, room, { from }) {
+    this.checkers.decline(p, from);
+  },
+
+  ck_move(p, room, { from, to }, now) {
+    this.checkers.move(p, from, to, now);
+  },
+
+  ck_resign(p) {
+    this.checkers.resign(p);
   },
 
   mg_open(p) {
