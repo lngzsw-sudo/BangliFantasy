@@ -317,6 +317,13 @@ export const BOT_LEVEL_MARGIN = 2;
 // may loot each other's drops, and pool their damage towards boss loot.
 export const PARTY = { max: 5, range: 12, bonus: 0.2, inviteMs: 60_000 };
 
+// หมากฮอสไทย at the market table: against ลุงชม (the bot) or another player.
+// Wins pay coins, for the first `dailyWins` wins of each Bangkok day.
+export const CHECKERS = {
+  turnMs: 60_000, botDelayMs: 800, inviteMs: 60_000,
+  reward: { bot: 20, player: 40 }, dailyWins: 5,
+};
+
 // ---------- room 05: the temple fair ----------
 
 // ซุ้มสอยดาว: pay for a star, win what's behind it. `w` weights are relative.

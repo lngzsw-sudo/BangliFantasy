@@ -123,6 +123,17 @@ starts with `blfs_`, so it can share a database with other apps.
       emote per call counts.
     - The best dancer (at least 3/5) wins 120 coins; everyone else gets 10
       coins per point.
+- **♟️ หมากฮอสไทย** at the table in the lower-left of the market, as a close-up
+  board with bottle caps for pieces:
+  - Play **ลุงชม** (an alpha-beta bot) or challenge another player by name or
+    from the nearby list; they accept from a pop-up wherever they are.
+  - Thai rules: men move and capture diagonally forward, capturing is
+    compulsory and must continue while possible.
+  - A man reaching the far row becomes a **ฮอส** 👑, which slides any
+    distance but lands right behind the piece it takes.
+  - 60 s per turn, and running out of time or leaving forfeits.
+  - Wins pay 20 coins against ลุงชม or 40 against a player, up to 5 rewarded
+    wins a day.
 - **🛍️ Props and 🐈 pets** (just for looks). Props go in your other hand:
   - **ถุงโอเลี้ยง:** ป้าศรี, 60 coins.
   - **พัดลมมือถือ:** เฮียเล้ง, 150 coins.
@@ -177,9 +188,7 @@ board, a hat slot, room 03 (the canal) with its miniboss, and room 04 (the
 suburbs) with the timed world boss, parties, and room 05 (the temple fair) with
 สอยดาว, เซียมซี and the dance-off stage.
 
-Also added: prop and pet slots.
-
-Not built yet: the 1v1 board games.
+Also added: prop and pet slots, and the 1v1 board game (หมากฮอสไทย).
 
 ## Architecture
 
@@ -192,12 +201,14 @@ client/            static, no build step: served as ES modules
   src/ui.js        HUD / shop / tailor / bag panels
   src/minigame.js  close-up card-matching overlay
   src/fair.js      temple fair: สอยดาว board, เซียมซี card, dance-off calls
+  src/checkers.js  หมากฮอส close-up board, challenges, table lobby
   src/art.js       pixel art as ASCII data (characters, monsters, drops, weapons)
   src/textures.js  turns art + procedural tiles into Phaser textures at runtime
 shared/            imported by both server and browser
   constants.js     items, weapons, monsters, shops, recipes, stat formulas
   maps.js          ASCII room maps, portals, NPCs, spawn zones
   pathfinding.js   8-direction A*
+  checkers.js      หมากฮอสไทย rules and the ลุงชม bot
 server/
   index.js         http static server + WebSocket (ws) on /ws
   world.js         sessions, login, message routing, room transfers
@@ -206,6 +217,7 @@ server/
   bounty.js        daily bounty progress and claims
   party.js         party invites, membership, party chat and member sync
   fair.js          temple fair: fortunes and their buffs, สอยดาว prizes, dance-off stage
+  checkers.js      หมากฮอส matches: challenges, turns, timeouts, rewards
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)
@@ -263,7 +275,8 @@ needed.
 Client → server: `hello {mode: login|register|session|recover, name, password?, remember?, session?, code?}`, `logout {session}`, `recovery_new {password}`, `move {x,y}`, `attack {id}`, `chat {text}`,
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `bounty_claim {id}`, `party_invite {name}`, `party_accept {from}`,
-`party_decline {from}`, `party_leave`, `party_kick {name}`, `stars_pick {i}`, `fortune_draw`, `mg_open`, `mg_flip {i}`,
+`party_decline {from}`, `party_leave`, `party_kick {name}`, `stars_pick {i}`, `fortune_draw`, `ck_bot`,
+`ck_challenge {name}`, `ck_accept {from}`, `ck_decline {from}`, `ck_move {from, to}`, `ck_resign`, `mg_open`, `mg_flip {i}`,
 `mg_close`, `ping`.
 `chat {text, party: true}` goes to your party only.
 
@@ -271,4 +284,4 @@ Server → client: `welcome`, `room` (full room state), `join`/`leave`,
 `s` (delta snapshot `[id, x, y, hp, dir]`), `hit`, `die`, `gone`, `lvl`, `look`,
 `chat`, `emote`, `fx`, `me` (your private profile), `auto`, `toast`, `sys`,
 `announce` (server-wide, e.g. the world boss), `party` (member list, or `null`), `party_invite`,
-`stars` (prize), `fortune`, `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.
+`stars` (prize), `fortune`, `ck` (หมากฮอส: `start` / `state` / `bad` / `end`), `ck_invite`, `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.

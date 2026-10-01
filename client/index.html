@@ -78,6 +78,14 @@
       <div class="timer"><div id="stage-timer"></div></div>
     </div>
 
+    <div id="ck-invite" class="invite" role="dialog" aria-live="polite" hidden>
+      <p>♟️ <b id="ck-invite-from"></b> ท้าดวลหมากฮอส</p>
+      <div class="recovery-actions">
+        <button id="ck-invite-no" type="button">ไม่รับ</button>
+        <button id="ck-invite-yes" type="button" class="primary">รับคำท้า ✓</button>
+      </div>
+    </div>
+
     <div id="party-invite" role="dialog" aria-live="polite" hidden>
       <p>👥 <b id="party-invite-from"></b> ชวนเข้าปาร์ตี้</p>
       <div class="recovery-actions">
@@ -129,6 +137,29 @@
         <button id="stars-reset" type="button">ขึ้นแผงใหม่</button>
       </footer>
       <p class="stars-prizes" id="stars-prizes"></p>
+    </div>
+  </div>
+
+  <!-- หมากฮอส: close-up table -->
+  <div id="ck" hidden>
+    <div class="closeup-inner">
+      <header>
+        <h2 id="ck-title">♟️ หมากฮอส</h2>
+        <button id="ck-close" aria-label="ปิด">✕</button>
+      </header>
+      <div class="ck-table"><div id="ck-board"></div></div>
+      <footer>
+        <span id="ck-status"></span>
+        <span id="ck-timer"></span>
+        <button id="ck-resign" type="button" class="danger">ยอมแพ้</button>
+      </footer>
+      <div id="ck-result" hidden>
+        <p id="ck-result-text"></p>
+        <div class="recovery-actions">
+          <button id="ck-again" type="button" class="primary">เล่นกับลุงชมอีกตา</button>
+          <button id="ck-done" type="button">ปิด</button>
+        </div>
+      </div>
     </div>
   </div>
 

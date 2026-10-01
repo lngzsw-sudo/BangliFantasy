@@ -1,6 +1,6 @@
 import {
   DROP_LIFETIME_MS, DROP_OWNER_LOCK_MS, MONSTERS, PICKUP_RANGE, POTION_COOLDOWN_MS,
-  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, PARTY, PLAYER_SPEED, playerStats,
+  DEATH_RESPAWN_MS, ITEMS, BOT_LEVEL_MARGIN, PARTY, PLAYER_SPEED, bountyDay, playerStats,
 } from '../shared/constants.js';
 import { buildBlockedGrid, portalAt, roomSize, tileAt } from '../shared/maps.js';
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
@@ -670,6 +670,7 @@ export function selfView(p, now) {
     id: p.id, name, level, exp, coins, inv, equip, stats: p.stats, hp: Math.round(p.hp), auto: p.auto,
     bounty: bountyView(p.profile, now),
     fortune: activeFortune(p.profile, now),
+    checkersWins: p.profile.checkers?.day === bountyDay(now) ? p.profile.checkers.wins : 0,
   };
 }
 
