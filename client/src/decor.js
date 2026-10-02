@@ -2,7 +2,8 @@ import { OUTLINE as K, shade } from './art.js';
 
 // Scenery sprites for room.decor (see DECOR in shared/maps.js), drawn from code
 // like the tiles. Each piece stands on the bottom of its tile: `w`×`h` art px,
-// `top` = how high above the ground overhead wires attach, `variants` = looks.
+// `top` = how high above the ground overhead wires attach, `variants` = looks,
+// `text` = the box (art px) where a decor entry's text is painted, in what size and colour.
 // Also the ground overlays that soften tile edges (wall shadows, grass lips,
 // river banks, rice-field bunds) and the soft glow used for night lighting.
 
@@ -351,9 +352,20 @@ export const DECOR_ART = {
 
   // เรือหางยาว: long-tail boat, ribbons on the prow, engine and shaft at the stern.
   boat: {
-    w: 66, h: 28, top: 0, variants: 3,
-    draw({ R }, v) {
-      const stripe = ['#2fb3b3', '#d94f4f', '#ffd23f'][v];
+    w: 66, h: 34, top: 0, variants: 4,
+    draw(k, v) {
+      const { R, E, O } = k;
+      // v3 is ก๋วยเตี๋ยวเรือ: a noodle seller in a งอบ hat with a steaming pot.
+      if (v === 3) {
+        R(30, 0, 1, 4, 'rgba(255,255,255,0.5)'), R(33, 1, 1, 4, 'rgba(255,255,255,0.4)');
+        O(31, 13, 7, 6, '#9aa3ad'), R(25, 8, 13, 2, '#c9ced6'), R(28, 7, 7, 1, K);
+        R(14, 14, 6, 8, K), R(15, 14, 4, 8, '#3b82c4');
+        E(17, 12, 3, 3, K), E(17, 12, 2, 2, '#c68b5e');
+        for (let i = 0; i < 6; i++) R(17 - i, 6 + i, 1 + i * 2, 1, i === 5 ? K : '#e3c16f');
+        R(16, 5, 2, 1, K);
+      }
+      k.ctx.translate(0, 6);
+      const stripe = ['#2fb3b3', '#d94f4f', '#ffd23f', '#2fb3b3'][v];
       R(3, 26, 58, 2, 'rgba(207,232,239,0.55)');
       // hull: sweeps up into a pointed prow on the left
       for (let x = 0; x < 58; x++) {
@@ -460,6 +472,49 @@ export const DECOR_ART = {
   },
 };
 
+// Painted signs. Their words come from the decor entry (see DECOR in shared/maps.js).
+Object.assign(DECOR_ART, {
+  // The market's name board, hung on the upper floor of the shophouses.
+  signboard: {
+    w: 128, h: 32, flat: true,
+    text: { x: 64, y: 15, size: 13, size2: 6, color: '#ffd23f', color2: '#fff3d6', gap: 1 },
+    draw({ R }) {
+      R(0, 1, 128, 30, K), R(1, 2, 126, 28, '#c99a1a'), R(3, 4, 122, 24, K), R(4, 5, 120, 22, '#7a1e1e');
+      R(4, 5, 120, 1, '#a83232'), R(4, 26, 120, 1, '#5a1414');
+      for (const x of [6, 120]) R(x, 7, 2, 2, '#ffd23f'), R(x, 23, 2, 2, '#ffd23f');
+      R(20, 0, 2, 2, '#4a2c18'), R(106, 0, 2, 2, '#4a2c18');
+    },
+  },
+  // A wide wooden name sign on two posts.
+  board: {
+    w: 64, h: 40, top: 0,
+    text: { x: 32, y: 14, size: 8, color: '#fff3d6' },
+    draw({ R, shadow }) {
+      shadow(32, 38, 26, 2);
+      R(8, 22, 4, 17, K), R(9, 22, 2, 16, '#6b4226'), R(52, 22, 4, 17, K), R(53, 22, 2, 16, '#6b4226');
+      R(1, 4, 62, 21, K), R(2, 5, 60, 19, '#3f6b4a'), R(2, 5, 60, 1, '#5f9a6a'), R(3, 7, 58, 15, '#2f5a3a');
+      R(2, 23, 60, 1, '#25452d');
+    },
+  },
+  // ยายบัว's cart: a big pot of บัวลอย, coconuts and bowls.
+  bualoy: {
+    w: 36, h: 44, top: 0,
+    text: { x: 18, y: 31, size: 6, color: '#d94f4f' },
+    draw({ R, E, O, shadow }) {
+      shadow(18, 42, 16, 2);
+      R(0, 6, 2, 30, '#8b5a33'), R(34, 6, 2, 30, '#8b5a33'), R(0, 4, 36, 4, K), R(1, 5, 34, 2, '#d94f4f');
+      R(2, 22, 32, 15, K), R(3, 23, 30, 13, '#a8703f'), R(3, 23, 30, 1, '#c88a50');
+      R(5, 27, 26, 8, '#fff3d6');
+      for (const x of [6, 30]) O(x, 39, 3, 3, '#3a3a3a'), R(x, 39, 1, 1, '#c9ced6');
+      // pot with steam, coconuts, a stack of bowls
+      R(6, 13, 14, 10, K), R(7, 14, 12, 8, '#c9ced6'), R(8, 14, 3, 8, '#e6e8eb'), E(13, 13, 7, 2, K), E(13, 13, 6, 1, '#e6e8eb');
+      R(10, 7, 1, 4, 'rgba(255,255,255,0.65)'), R(14, 8, 1, 4, 'rgba(255,255,255,0.55)');
+      O(25, 19, 3, 3, '#5a8a3a'), O(30, 19, 3, 3, '#7a5a3a'), R(24, 17, 2, 1, '#8fcf65');
+      R(22, 12, 8, 2, K), R(23, 10, 6, 2, '#ffffff'), R(23, 12, 6, 1, '#d9e0e6');
+    },
+  },
+});
+
 export function decorKey(kind, v = 0) {
   return `decor_${kind}_${v}`;
 }
@@ -467,7 +522,7 @@ export function decorKey(kind, v = 0) {
 // ---------- ground overlays ----------
 
 // Tiles that stand tall enough to throw a shadow on the floor below/right.
-export const SHADOW_CASTERS = '#AGHRSFC';
+export const SHADOW_CASTERS = '#AGHRSFCYQ';
 export const GRASS = ',t';
 export const WATER = '~s';
 

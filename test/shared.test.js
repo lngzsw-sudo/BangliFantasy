@@ -84,13 +84,15 @@ test('decor: known kinds with art, on the right tiles, and wires tie to somethin
   const { DECOR_ART } = await import('../client/src/decor.js');
   for (const kind of Object.keys(DECOR)) assert.ok(DECOR_ART[kind], `art for ${kind}`);
   for (const room of Object.values(ROOMS)) {
-    for (const [kind, x, y, v = 0] of room.decor ?? []) {
+    for (const [kind, x, y, v = 0, words] of room.decor ?? []) {
       const def = DECOR[kind];
       assert.ok(def, `${room.id} unknown decor ${kind}`);
+      if (words) assert.ok(DECOR_ART[kind].text, `${room.id} ${kind} has nowhere to paint "${words}"`);
       assert.ok(v < (DECOR_ART[kind].variants ?? 1), `${room.id} ${kind} variant ${v}`);
       for (let i = 0; i < (def.w ?? 1); i++) {
         const ch = tileAt(room, x + i, y);
         if (kind === 'ac' || kind === 'shutter') assert.equal(ch, '#', `${room.id} ${kind} at ${x + i},${y} hangs on a wall`);
+        else if (kind === 'signboard') assert.equal(ch, 'Y', `${room.id} signboard at ${x + i},${y} hangs on a shophouse`);
         else if (kind === 'boat' || kind === 'lotus') assert.ok('~s'.includes(ch), `${room.id} ${kind} at ${x + i},${y} floats`);
         else assert.ok(!TILES[ch].block, `${room.id} ${kind} at ${x + i},${y} stands on open ground`);
         assert.ok(!room.portals.some((p) => x + i >= p.x && x + i < p.x + p.w && y >= p.y && y < p.y + p.h), `${room.id} ${kind} on a portal`);

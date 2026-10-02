@@ -26,9 +26,12 @@ export const TILES = {
   'J': { name: 'incense altar', block: true }, // โต๊ะธูปหน้าศาลเจ้า
   'l': { name: 'lantern post', block: true }, // เสาโคมไฟ
   'D': { name: 'stage' }, // เวทีงานวัด
+  'Y': { name: 'shophouse upper floor', block: true }, // ห้องแถวไม้ชั้นบน
+  'Q': { name: 'folding plank doors', block: true }, // บานเฟี้ยมหน้าห้องแถว
 };
 
-// Scenery placed on top of the tiles: room.decor is a list of [kind, x, y, variant?].
+// Scenery placed on top of the tiles: room.decor is a list of [kind, x, y, variant?, text?]
+// (text is painted on signs; '\n' starts a smaller second line).
 // `block` pieces stop players and monsters like a wall, `flat` ones lie on the
 // ground under everyone, the rest stand up and are depth-sorted with entities.
 // `w` is the footprint width in tiles (default 1). Sprites live in client/src/decor.js.
@@ -54,6 +57,9 @@ export const DECOR = {
   lotus: { name: 'บัว', flat: true },
   flowers: { name: 'ดอกไม้', flat: true },
   ac: { name: 'แอร์', flat: true }, // hung on a wall tile
+  signboard: { name: 'ป้ายตลาด', flat: true }, // on the shophouse upper floor
+  board: { name: 'ป้ายชื่อ', block: true, w: 2 },
+  bualoy: { name: 'รถเข็นบัวลอย', block: true },
   shutter: { name: 'ประตูเหล็กม้วน', flat: true }, // on a wall tile
   manhole: { name: 'ฝาท่อ', flat: true },
 };
@@ -62,14 +68,14 @@ export const ROOMS = {
   market: {
     id: 'market',
     name: 'ลานกลางตลาดสดบางลี่',
-    subtitle: 'Safe Zone',
+    subtitle: 'Safe Zone · ตลาดร้อยปี',
     safe: true,
     theme: 'market',
     spawn: { x: 15, y: 9 },
     tiles: [
-      '################################',
-      '#AAAAAA#AAAAAAAA####AAAAAAAA####',
-      '#......#........####........####',
+      '#YYYYYYYYYYYYYYYYYYYYYYYYYYYYYY#',
+      '#AAAAAAYAAAAAAAAYYYYAAAAAAAAYYY#',
+      '#......Q........QQQQ........QQQ#',
       '#.................NN...........#',
       '#..TT..........................#',
       '#..TT......,,,,,,,,,.......KK..#',
@@ -91,6 +97,7 @@ export const ROOMS = {
       { id: 'npc_cafe', kind: 'cafe', name: 'ป้าศรี ร้านกาแฟโบราณ', x: 3, y: 2, look: { skin: '#e0ac7e', hair: '#d9d9d9', shirt: '#b0463c' } },
       { id: 'npc_tailor', kind: 'tailor', name: 'ช่างเจี๊ยบ ร้านตัดเสื้อ', x: 12, y: 2, look: { skin: '#f2c9a0', hair: '#2b1d16', shirt: '#6a4fb3' } },
       { id: 'npc_grocery', kind: 'grocery', name: 'เฮียเล้ง ร้านโชห่วย', x: 24, y: 2, look: { skin: '#f2c9a0', hair: '#1b1b2a', shirt: '#ffffff' } },
+      { id: 'npc_bualoy', kind: 'dessert', name: 'ยายบัว บัวลอยมะพร้าวอ่อน', x: 8, y: 8, look: { skin: '#e0ac7e', hair: '#e8e8e8', shirt: '#2fb3b3' } },
     ],
     objects: [
       { id: 'obj_cafe_table', kind: 'minigame', name: 'โต๊ะหน้าร้านกาแฟ (การ์ดจับคู่)', x: 3, y: 4, w: 2, h: 2 },
@@ -99,6 +106,9 @@ export const ROOMS = {
     ],
     decor: [
       ['bodhi', 15, 7], ['spirit', 30, 3],
+      // The market's own sign on the old wooden shophouses, and ยายบัว's cart.
+      ['signboard', 16, 1, 0, 'ตลาดบางลี่\nตลาดร้อยปี · สองพี่น้อง'],
+      ['bualoy', 7, 8, 0, 'บัวลอย'], ['stools', 7, 9, 1],
       ['flowers', 12, 6], ['flowers', 18, 6, 1], ['flowers', 12, 10, 1], ['flowers', 18, 10],
       ['lamp', 10, 4], ['lamp', 20, 4], ['lamp', 20, 11],
       ['pot', 8, 2], ['pot', 15, 2, 1], ['pot', 27, 2],
@@ -193,7 +203,8 @@ export const ROOMS = {
     npcs: [],
     objects: [],
     decor: [
-      ['boat', 2, 8], ['boat', 17, 8, 1], ['boat', 24, 11, 2],
+      ['board', 2, 4, 0, 'คลองสองพี่น้อง'],
+      ['boat', 2, 8], ['boat', 17, 8, 1], ['boat', 24, 11, 2], ['boat', 10, 9, 3],
       ['lotus', 8, 9], ['lotus', 19, 7, 1], ['lotus', 30, 7], ['lotus', 3, 11, 1], ['lotus', 35, 9],
       ['jar', 8, 3], ['jar', 25, 3], ['jar', 36, 3], ['jar', 3, 2],
       ['flowers', 10, 12], ['flowers', 18, 13, 1], ['flowers', 29, 12], ['flowers', 5, 1, 1],
