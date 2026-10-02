@@ -49,6 +49,7 @@ export class Checkers {
       this.open();
       this.ui.closePanel();
     } else if (m.ev === 'state') {
+      if (m.last && JSON.stringify(m.last) !== JSON.stringify(this.state?.last)) this.ui.sound.sfx('click');
       const myTurnNow = m.turn === this.you && this.state?.turn !== this.you;
       this.state = m;
       this.deadline = Date.now() + m.ms;
@@ -60,6 +61,7 @@ export class Checkers {
     } else if (m.ev === 'end') {
       this.ended = true;
       const won = m.winner === m.you;
+      this.ui.sound.sfx(won ? 'quest' : m.winner === 'draw' ? 'good' : 'bad');
       const text = m.winner === 'draw' ? '🤝 เสมอ!' : won ? '🏆 คุณชนะ!' : `😵 ${m.winnerName} ชนะ`;
       $('#ck-result-text').innerHTML = `${text}<small>${REASON[m.reason] ?? ''}${m.reward ? ` · รับ 🪙 ${m.reward}` : won ? ' · (วันนี้รับรางวัลครบแล้ว)' : ''}</small>`;
       $('#ck-again').hidden = !this.bot;

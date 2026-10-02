@@ -91,6 +91,7 @@ export class WorldScene extends Phaser.Scene {
   // ---------- room ----------
 
   onRoom(msg) {
+    if (this.room) this.ui.sound.sfx('portal');
     this.meId = msg.you;
     this.room = ROOMS[msg.room];
     this.targetId = null;
@@ -101,6 +102,7 @@ export class WorldScene extends Phaser.Scene {
     for (const e of msg.ents) this.addEntity(e);
     this.snapCamera();
     this.ui.onRoom(this.room);
+    this.ui.sound.music(this.room.theme);
   }
 
   // (Re)draw the static map. Called on room change and when the scale changes.
@@ -360,6 +362,11 @@ export class WorldScene extends Phaser.Scene {
 
   onHit({ a, d, n, crit, miss, block, poison, wave }) {
     if (a === this.meId) this.setTarget(d);
+    const sound = this.ui.sound;
+    if (miss && (a === this.meId || d === this.meId)) sound.sfx('miss');
+    else if (block && d === this.meId) sound.sfx('click');
+    else if (d === this.meId && n) sound.sfx('hurt');
+    else if (a === this.meId && n) sound.sfx(crit ? 'crit' : 'hit');
     if (!this.fx) return;
     const attacker = this.ents.get(a);
     const target = this.ents.get(d);
@@ -392,6 +399,7 @@ export class WorldScene extends Phaser.Scene {
   onDie(id) {
     const ent = this.ents.get(id);
     if (!ent) return;
+    if (id === this.meId) this.ui.sound.sfx('die');
     if (ent.data.k === 'm' && !this.fx) {
       this.removeEntity(id, true);
     } else if (ent.data.k === 'm') {
@@ -415,6 +423,7 @@ export class WorldScene extends Phaser.Scene {
     if (!ent) return;
     const picker = this.ents.get(by);
     if (by === this.meId) {
+      this.ui.sound.sfx(ent.data.item === 'coin' ? 'coin' : 'pickup');
       const name = ent.data.item === 'coin' ? '🪙' : ITEMS[ent.data.item]?.icon ?? '';
       this.floatText(by, `+${ent.data.amount} ${name}`, '#ffe066', 14);
     }
@@ -436,6 +445,7 @@ export class WorldScene extends Phaser.Scene {
     ent.data.maxHp = maxHp;
     ent.data.hp = maxHp;
     ent.label.setText(`Lv.${lvl} ${ent.data.name}`);
+    if (id === this.meId) this.ui.sound.sfx('level');
     this.drawHp(ent);
     this.floatText(id, 'LEVEL UP!', '#9ff0ff', 20);
     if (!this.fx) return;
@@ -460,7 +470,10 @@ export class WorldScene extends Phaser.Scene {
   onFx({ id, fx, n, ms, r, label }) {
     const ent = this.ents.get(id);
     if (!ent || !this.fx) return;
-    if (fx === 'heal') return this.floatText(id, `+${n}`, '#6dff8a');
+    if (fx === 'heal') {
+      if (id === this.meId) this.ui.sound.sfx('heal');
+      return this.floatText(id, `+${n}`, '#6dff8a');
+    }
     if (fx === 'slow' || fx === 'poison') {
       const [color, label] = fx === 'slow' ? [0x7cc7ff, '🌿 ช้าลง'] : [0x9be15d, '☠ ติดพิษ'];
       this.floatText(id, label, fx === 'slow' ? '#7cc7ff' : '#9be15d', 13);
