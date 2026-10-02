@@ -39,6 +39,7 @@ export class Quests {
     const last = done >= TUTORIAL.length;
     p.send({ t: 'quest', ev: 'done', id: s.id, text: s.text, reward: parts.join(' · '), last });
     if (exp) this.world.rooms.get(p.roomId)?.grantExp(p, exp);
+    if (last) this.world.achievements.check(p);
   }
 
   skip(p) {

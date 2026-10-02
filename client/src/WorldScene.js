@@ -61,6 +61,7 @@ export class WorldScene extends Phaser.Scene {
     net.on('chat', (m) => !m.party && this.showBubble(m.id, m.text)); // party chat stays in the log
     net.on('emote', (m) => this.playEmote(m.id, m.e));
     net.on('fx', (m) => this.onFx(m));
+    net.on('title', (m) => this.onTitle(m));
     this.ui.sceneReady(this);
   }
 
@@ -215,6 +216,11 @@ export class WorldScene extends Phaser.Scene {
       const label = e.k === 'm' ? `${e.boss ? '👑 ' : ''}${e.name} Lv.${e.lvl}` : `Lv.${e.lvl} ${e.name}`;
       ent.label = text(this, 0, ent.headY - 7 * U, label, { fontSize: '11px', color: this.labelColor(e) }).setOrigin(0.5, 1);
       c.add(ent.label);
+      if (e.k === 'p') {
+        // Achievement title («...») above the name.
+        ent.titleLabel = text(this, 0, ent.headY - 21 * U, e.title ? `«${e.title}»` : '', { fontSize: '10px', color: '#ffe066' }).setOrigin(0.5, 1);
+        c.add(ent.titleLabel);
+      }
       ent.ring = this.add.ellipse(0, 0, 28 * S, 10 * S).setStrokeStyle(2 * U, 0xff4d4d).setVisible(false);
       c.addAt(ent.ring, 0);
       this.drawHp(ent);
@@ -244,6 +250,13 @@ export class WorldScene extends Phaser.Scene {
     const ok = weapon && this.textures.exists(`weapon_${weapon}`);
     ent.weapon.setVisible(!!ok);
     if (ok) ent.weapon.setTexture(`weapon_${weapon}`);
+  }
+
+  onTitle({ id, title }) {
+    const ent = this.ents.get(id);
+    if (!ent?.titleLabel) return;
+    ent.data.title = title ?? undefined;
+    ent.titleLabel.setText(title ? `«${title}»` : '');
   }
 
   // Prop in the other hand, hanging from (or held at) its grip point.
@@ -687,7 +700,7 @@ export class WorldScene extends Phaser.Scene {
       }
       this.placeEntity(ent);
       if (ent.pet) this.followPet(ent, time, dt);
-      if (ent.bubble) ent.bubble.setPosition(ent.c.x, ent.c.y + ent.headY - 20 * U);
+      if (ent.bubble) ent.bubble.setPosition(ent.c.x, ent.c.y + ent.headY - (ent.data.title ? 34 : 20) * U);
     }
 
     const me = this.ents.get(this.meId);

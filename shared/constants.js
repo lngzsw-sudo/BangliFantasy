@@ -100,6 +100,10 @@ export const ITEMS = {
     name: 'เสื้อลายดอกงานวัด', icon: '🌺',
     desc: 'ชุดแฟชั่นหายาก: เสื้อเชิ้ตลายดอกสีสด ได้จากซุ้มสอยดาวเท่านั้น', slot: 'body',
   },
+  // Only from achievements (ตู้โชว์).
+  hat_ratears: { name: 'ที่คาดผมหูหนู', icon: '🐭', desc: 'หมวกแฟชั่นจากความสำเร็จ "นักล่าหนูท่อ"', slot: 'head' },
+  hat_pakama: { name: 'ผ้าขาวม้าโพกหัว', icon: '🎗️', desc: 'หมวกแฟชั่นจากความสำเร็จ "เซียนหมากฮอส"', slot: 'head' },
+  shirt_disco: { name: 'เสื้อเลื่อมดิสโก้', icon: '🪩', desc: 'ชุดแฟชั่นจากความสำเร็จ "ราชาเวทีงานวัด"', slot: 'body' },
   // Props: held in the other hand, just for looks.
   prop_oliang: { name: 'ถุงโอเลี้ยง', icon: '🛍️', desc: 'พร็อพถือ: โอเลี้ยงใส่ถุงมัดหนังยาง ถือแล้วดูเป็นคนตลาดตัวจริง', slot: 'prop' },
   prop_fan: { name: 'พัดลมมือถือ', icon: '🌀', desc: 'พร็อพถือ: พัดลมจิ๋วสู้แดดบางลี่', slot: 'prop' },
@@ -332,6 +336,31 @@ export const TUTORIAL = [
   { id: 'fortune', on: 'fortune', n: 1, text: 'ไปเสี่ยงเซียมซีที่งานวัด', hint: 'ออกประตูซ้ายของตลาด แล้วไปที่โต๊ะธูปหน้าศาลเจ้า', reward: { coins: 50, exp: 30 } },
 ];
 
+// ตู้โชว์: achievements. Each unlocks a title to show over your name, and a
+// few also give a fashion item you can't get anywhere else. `req` is one of:
+// { kill: type, n } (lifetime kills), { level }, { stat, n } (a counter in
+// profile.stats), { quest: true } (tutorial done), { fashion: n } (fashion
+// items owned), { pet: true }.
+export const ACHIEVEMENTS = [
+  { id: 'newbie', icon: '🎓', title: 'บัณฑิตตลาดบางลี่', desc: 'ทำเควสต์มือใหม่ครบ', req: { quest: true } },
+  { id: 'lv10', icon: '⭐', title: 'เด็กตลาด', desc: 'ถึงเลเวล 10', req: { level: 10 } },
+  { id: 'lv20', icon: '🌟', title: 'ขาใหญ่ตลาด', desc: 'ถึงเลเวล 20', req: { level: 20 } },
+  { id: 'lv30', icon: '💫', title: 'เจ้าถิ่นบางลี่', desc: 'ถึงเลเวล 30', req: { level: 30 } },
+  { id: 'lv40', icon: '👑', title: 'ตำนานบางลี่', desc: 'ถึงเลเวล 40', req: { level: 40 } },
+  { id: 'rats', icon: '🐀', title: 'นักล่าหนูท่อ', desc: 'ปราบหนูท่อลมปราณ 100 ตัว', req: { kill: 'rat', n: 100 }, item: 'hat_ratears' },
+  { id: 'pigeons', icon: '🐦', title: 'ผู้ไล่นกพิราบ', desc: 'ปราบนกพิราบแย่งข้าว 50 ตัว', req: { kill: 'pigeon', n: 50 } },
+  { id: 'dogs', icon: '🐕', title: 'ขาประจำซอย', desc: 'ปราบหมาจรจัดประจำซอย 30 ตัว', req: { kill: 'dog', n: 30 } },
+  { id: 'hyacinth', icon: '🌿', title: 'ผู้พิทักษ์คลอง', desc: 'ปราบผักตบชวากลายพันธุ์ 50 ตัว', req: { kill: 'hyacinth', n: 50 } },
+  { id: 'flood', icon: '🌊', title: 'ฮีโร่กู้ภัย', desc: 'ปราบมวลน้ำท่วม 3 ครั้ง', req: { kill: 'flood', n: 3 } },
+  { id: 'sidecar', icon: '🔊', title: 'ตำนานงานวัด', desc: 'ปราบรถพ่วงข้างแต่งซิ่งติดลำโพงงานวัด', req: { kill: 'sidecar', n: 1 } },
+  { id: 'checkers', icon: '♟️', title: 'เซียนหมากฮอส', desc: 'ชนะหมากฮอส 10 ครั้ง', req: { stat: 'ckWins', n: 10 }, item: 'hat_pakama' },
+  { id: 'dance', icon: '💃', title: 'ราชาเวทีงานวัด', desc: 'ชนะประชันท่าเต้น 5 ครั้ง', req: { stat: 'danceWins', n: 5 }, item: 'shirt_disco' },
+  { id: 'stars', icon: '✨', title: 'มือสอยดาว', desc: 'สอยดาว 30 ดวง', req: { stat: 'stars', n: 30 } },
+  { id: 'fortune', icon: '🧧', title: 'สายมู', desc: 'เสี่ยงเซียมซี 7 วัน', req: { stat: 'fortunes', n: 7 } },
+  { id: 'fashion', icon: '👗', title: 'แฟชั่นนิสต้าบางลี่', desc: 'มีชุดแฟชั่น (เสื้อหรือหมวก) 6 ชิ้น', req: { fashion: 6 } },
+  { id: 'pet', icon: '🐾', title: 'ทาสหมาทาสแมว', desc: 'รับสัตว์เลี้ยงมาเลี้ยง', req: { pet: true } },
+];
+
 // หมากฮอสไทย at the market table: against ลุงชม (the bot) or another player.
 // Wins pay coins, for the first `dailyWins` wins of each Bangkok day.
 export const CHECKERS = {
@@ -473,6 +502,9 @@ export function newProfile(name) {
     look: lookFromName(name),
     bounty: null, // { day, progress: { id: n }, claimed: [id] }
     quest: { step: 0, n: 0 }, // เควสต์มือใหม่: TUTORIAL[step], n counted so far
+    stats: { kills: {} }, // lifetime counters for achievements
+    achievements: [], // unlocked ACHIEVEMENTS ids
+    title: null, // the achievement id shown as a title over your name
   };
 }
 

@@ -8,6 +8,7 @@ import { recordKill, bountyView } from './bounty.js';
 import { addExp, killExp, randInt, rollDamage } from './combat.js';
 import { DanceStage, activeFortune, buffBonus } from './fair.js';
 import { questView } from './quests.js';
+import { achievementView, titleOf } from './achievements.js';
 
 let nextId = 1;
 export const newId = (prefix) => `${prefix}${nextId++}`;
@@ -230,6 +231,7 @@ export class GameRoom {
       const bonus = 1 + buffBonus(w.profile, now, 'exp');
       this.grantExp(w, Math.round(killExp(m.def.exp, m.def.level, w.profile.level) * share * bonus));
       this.world.quests.event(w, 'kill', m.type);
+      this.world.achievements.kill(w, m.type);
       for (const b of recordKill(w.profile, m.type, now)) {
         w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
       }
@@ -272,6 +274,7 @@ export class GameRoom {
       this.broadcast({ t: 'lvl', id: p.id, lvl: p.profile.level, maxHp: p.stats.maxHp });
       p.send({ t: 'toast', text: `เลเวลอัป! Lv.${before} → Lv.${p.profile.level}` });
       this.world.quests.check(p);
+      this.world.achievements.check(p);
     }
   }
 
@@ -653,6 +656,7 @@ export function playerView(p) {
     hp: Math.max(0, Math.round(p.hp)), maxHp: p.stats.maxHp, lvl: p.profile.level,
     look: p.profile.look, body: p.profile.equip.body, head: p.profile.equip.head, weapon: p.profile.equip.weapon,
     prop: p.profile.equip.prop ?? undefined, pet: p.profile.equip.pet ?? undefined,
+    title: titleOf(p.profile),
     dead: p.dead || undefined,
   };
 }
@@ -676,6 +680,7 @@ export function selfView(p, now) {
     fortune: activeFortune(p.profile, now),
     checkersWins: p.profile.checkers?.day === bountyDay(now) ? p.profile.checkers.wins : 0,
     quest: questView(p.profile),
+    trophies: achievementView(p.profile),
   };
 }
 

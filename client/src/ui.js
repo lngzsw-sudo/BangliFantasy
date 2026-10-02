@@ -1,4 +1,6 @@
-import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, TUTORIAL, WEAPONS, expToNext } from '/shared/constants.js';
+import {
+  ACHIEVEMENTS, EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, TUTORIAL, WEAPONS, expToNext,
+} from '/shared/constants.js';
 import { ROOMS } from '/shared/maps.js';
 import { Sound } from './audio.js';
 import { Checkers } from './checkers.js';
@@ -43,6 +45,13 @@ export class UI {
       ? `<span class="party">[ปาร์ตี้] <b>${esc(m.name)}:</b> ${esc(m.text)}</span>`
       : `<b>${esc(m.name)}:</b> ${esc(m.text)}`));
     net.on('party', (m) => this.setParty(m.party));
+    net.on('achieve', (m) => {
+      const a = ACHIEVEMENTS.find((x) => x.id === m.id);
+      if (!a) return;
+      this.sound.sfx('quest');
+      this.toast(`🏆 ปลดล็อกความสำเร็จ «${a.title}»${m.item ? ` ได้รับ ${ITEMS[m.item].icon} ${ITEMS[m.item].name}!` : ''}`);
+      this.log(`<b class="announce">🏆 ปลดล็อก «${esc(a.title)}»</b> ${esc(a.desc)} · ตั้งเป็นฉายาได้ที่ 🏆`);
+    });
     net.on('quest', (m) => {
       this.sound.sfx('quest');
       this.toast(`✅ เควสต์: ${m.text} สำเร็จ!${m.reward ? ` รับ ${m.reward}` : ''}`);
@@ -87,6 +96,7 @@ export class UI {
     $('#btn-bag').onclick = () => (this.panel?.kind === 'bag' ? this.closePanel() : this.openPanel({ kind: 'bag' }));
     $('#btn-emote').onclick = () => $('#emotes').classList.toggle('open');
     $('#btn-game').onclick = () => this.openMinigame();
+    $('#btn-trophy').onclick = () => (this.panel?.kind === 'trophies' ? this.closePanel() : this.openPanel({ kind: 'trophies' }));
     $('#btn-party').onclick = () => (this.panel?.kind === 'party' ? this.closePanel() : this.openPanel({ kind: 'party' }));
     $('#btn-travel').onclick = () => (this.panel?.kind === 'travel' ? this.closePanel() : this.openPanel({ kind: 'travel' }));
     $('#panel-close').onclick = () => this.closePanel();
@@ -126,6 +136,9 @@ export class UI {
     this.setAuto(me.auto);
     this.fair.showBuff(me.fortune);
     this.showQuest(me.quest);
+    const title = ACHIEVEMENTS.find((a) => a.id === me.trophies?.title)?.title;
+    $('#me-title').hidden = !title;
+    $('#me-title').textContent = title ? `«${title}»` : '';
     this.fair.updateCoins();
     if (this.panel) this.renderPanel();
   }
@@ -338,6 +351,30 @@ export class UI {
       });
     } else if (p.kind === 'party') {
       this.renderPartyPanel(title, body);
+    } else if (p.kind === 'trophies') {
+      title.textContent = '🏆 ตู้โชว์ความสำเร็จ';
+      const t = me.trophies;
+      const byId = new Map(t.list.map((x) => [x.id, x]));
+      const unlocked = t.list.filter((x) => x.done).length;
+      const current = ACHIEVEMENTS.find((a) => a.id === t.title);
+      body.innerHTML = `
+        <div class="trophy-head"><span>ปลดล็อกแล้ว <b>${unlocked}/${t.list.length}</b> · ฉายา: <b>${current ? esc(current.title) : 'ไม่มี'}</b></span>
+          ${current ? '<button data-title="">ไม่ใช้ฉายา</button>' : ''}</div>
+        <p class="party-hint">ปลดล็อกแล้วตั้งเป็นฉายาได้ ฉายาจะขึ้นเหนือชื่อให้ทุกคนเห็น บางอย่างได้ชุดพิเศษที่หาที่อื่นไม่ได้</p>` +
+        ACHIEVEMENTS.map((a) => {
+          const s = byId.get(a.id);
+          const reward = a.item ? `<small class="reward">ได้ ${ITEMS[a.item].icon} ${esc(ITEMS[a.item].name)}</small>` : '';
+          const action = !s.done ? '' : t.title === a.id ? '<button disabled>ใช้อยู่</button>' : `<button data-title="${a.id}">ใช้ฉายา</button>`;
+          return `<div class="row trophy${s.done ? '' : ' locked'}">
+            <span class="icon">${a.icon}</span>
+            <span class="info"><b>${esc(a.title)}</b><small>${esc(a.desc)}</small>${reward}
+              ${s.done ? '' : `<span class="progress"><span style="width:${(100 * s.have) / s.need}%"></span><em>${s.have}/${s.need}</em></span>`}</span>
+            ${action}
+          </div>`;
+        }).join('');
+      body.querySelectorAll('[data-title]').forEach((b) => {
+        b.onclick = () => this.net.send('title_set', { id: b.dataset.title || null });
+      });
     } else if (p.kind === 'checkers') {
       const nearby = [...(this.scene?.ents.values() ?? [])]
         .filter((e) => e.data.k === 'p' && e.data.id !== me.id)

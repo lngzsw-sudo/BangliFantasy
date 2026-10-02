@@ -159,6 +159,18 @@ starts with `blfs_`, so it can share a database with other apps.
   - Type **/p message** to chat with your party from any room.
   - Parties aren't saved: logging out leaves the party, and a party with one
     member left breaks up.
+- **🏆 ตู้โชว์ (achievements):** 17 goals tracked over your whole career:
+  - the tutorial;
+  - Lv 10/20/30/40;
+  - 100 rats, 50 pigeons, 30 dogs, 50 hyacinths;
+  - beating the flood boss 3 times and the world boss once;
+  - 10 หมากฮอส wins, 5 dance-off wins, 30 สอยดาว stars, 7 เซียมซี days;
+  - owning 6 fashion items, and adopting a pet.
+
+  Each unlocks a **title** you can show above your name («…»), and three
+  give outfits you can't get any other way: the rat-ear headband,
+  ผ้าขาวม้าโพกหัว and the disco sequin shirt. Open it with 🏆 on the
+  character card.
 - **🎵 Sound:** every room has its own chiptune loop (a ลูกทุ่ง-style
   market, a sneaky alley, a mellow canal, driving suburbs, and a หมอลำ
   temple fair with a แคน drone and ฉิ่ง). There are effects for hits, coins,
@@ -231,6 +243,7 @@ server/
   fair.js          temple fair: fortunes and their buffs, สอยดาว prizes, dance-off stage
   checkers.js      หมากฮอส matches: challenges, turns, timeouts, rewards
   quests.js        เควสต์มือใหม่: tutorial steps, progress and rewards
+  achievements.js  ตู้โชว์: lifetime stats, unlocks, titles
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)
@@ -295,7 +308,7 @@ Client → server: `hello {mode: login|register|session|recover, name, password?
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `bounty_claim {id}`, `party_invite {name}`, `party_accept {from}`,
 `party_decline {from}`, `party_leave`, `party_kick {name}`, `stars_pick {i}`, `fortune_draw`, `ck_bot`,
-`ck_challenge {name}`, `ck_accept {from}`, `ck_decline {from}`, `ck_move {from, to}`, `ck_resign`, `quest_skip`, `mg_open`, `mg_flip {i}`,
+`ck_challenge {name}`, `ck_accept {from}`, `ck_decline {from}`, `ck_move {from, to}`, `ck_resign`, `quest_skip`, `title_set {id}`, `mg_open`, `mg_flip {i}`,
 `mg_close`, `ping`.
 `chat {text, party: true}` goes to your party only.
 
@@ -303,4 +316,4 @@ Server → client: `welcome`, `room` (full room state), `join`/`leave`,
 `s` (delta snapshot `[id, x, y, hp, dir]`), `hit`, `die`, `gone`, `lvl`, `look`,
 `chat`, `emote`, `fx`, `me` (your private profile), `auto`, `toast`, `sys`,
 `announce` (server-wide, e.g. the world boss), `party` (member list, or `null`), `party_invite`,
-`stars` (prize), `fortune`, `ck` (หมากฮอส: `start` / `state` / `bad` / `end`), `ck_invite`, `quest` (a tutorial step done), `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.
+`stars` (prize), `fortune`, `ck` (หมากฮอส: `start` / `state` / `bad` / `end`), `ck_invite`, `quest` (a tutorial step done), `achieve`, `title`, `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.

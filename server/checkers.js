@@ -133,6 +133,7 @@ export class CheckersHall {
       if (winner === side) {
         const day = bountyDay(now);
         const rec = p.profile.checkers?.day === day ? p.profile.checkers : { day, wins: 0 };
+        this.world.achievements.add(p, 'ckWins');
         if (rec.wins < CHECKERS.dailyWins) {
           reward = vsBot ? CHECKERS.reward.bot : CHECKERS.reward.player;
           rec.wins++;
