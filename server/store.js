@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { newProfile } from '../shared/constants.js';
+import { TUTORIAL, newProfile } from '../shared/constants.js';
 
 // Player persistence. A record is { key, passHash, recoveryHash, profile }
 // where key is the lower-cased character name. Sessions ("remember me" logins)
@@ -212,5 +212,7 @@ export function migrateProfile(profile) {
     inv: { ...profile.inv },
     equip: { ...base.equip, ...profile.equip },
     look: { ...base.look, ...profile.look },
+    // Players who were already past the basics before the tutorial existed skip it.
+    quest: profile.quest ?? (profile.level >= 5 ? { step: TUTORIAL.length, n: 0 } : base.quest),
   };
 }

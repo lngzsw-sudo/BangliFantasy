@@ -307,6 +307,15 @@ button.link { background: none; border: none; box-shadow: none; color: var(--mut
 .row-form input { flex: 1; min-width: 0; padding: 8px; font: inherit; border: 2px solid var(--ink); border-radius: 8px; background: #fff7e8; color: var(--ink); }
 .row-form button { padding: 8px 10px; background: var(--accent); color: var(--accent-ink); }
 button.danger { padding: 8px; background: #7a2e2e; }
+/* ---------- เควสต์มือใหม่ ---------- */
+#quest { margin-top: 6px; padding: 6px 8px; border-radius: 8px; background: #2c3a24; border: 1px solid #4f6a3a; font-size: 12px; }
+#quest .q-head { display: flex; justify-content: space-between; align-items: center; gap: 4px; color: #b8e070; }
+#quest-skip { padding: 0 6px; font-size: 11px; line-height: 18px; box-shadow: none; background: transparent; border: none; color: var(--muted); }
+#quest-text { margin-top: 2px; }
+#quest-text em { font-style: normal; color: var(--accent); }
+#quest small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+#quest.pop { animation: pop 0.4s; }
+
 /* ---------- temple fair ---------- */
 #buff { margin-top: 4px; padding: 2px 6px; border-radius: 6px; background: #5a1a1a; color: #ffe066; font-size: 11px; }
 #stage-call {
@@ -430,4 +439,7 @@ h3.sub { margin: 12px 0 6px; font-size: 14px; color: var(--muted); }
   #chat-log { max-height: 84px; font-size: 12px; }
   #chat { width: calc(100vw - 150px); }
   #room-banner { font-size: 12px; }
+  /* Keep the card short on phones: tap the quest to read its hint. */
+  #quest small { display: none; }
+  #quest.open small { display: block; }
 }

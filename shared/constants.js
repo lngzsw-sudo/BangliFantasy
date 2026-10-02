@@ -317,6 +317,21 @@ export const BOT_LEVEL_MARGIN = 2;
 // may loot each other's drops, and pool their damage towards boss loot.
 export const PARTY = { max: 5, range: 12, bonus: 0.2, inviteMs: 60_000 };
 
+// เควสต์มือใหม่: a chain that walks new players through the game. `on` is
+// what counts: buy/craft/kill/enter (with `target`), auto, bounty, fortune
+// events, or a state check: 'have' (items in the bag) and 'level'.
+export const TUTORIAL = [
+  { id: 'buy_oliang', on: 'buy', target: 'oliang', n: 1, text: 'ซื้อโอเลี้ยงจากป้าศรี', hint: 'ป้าศรีอยู่ร้านกาแฟมุมซ้ายบนของตลาด แตะที่ป้าเพื่อเปิดร้าน', reward: { coins: 10 } },
+  { id: 'go_alley', on: 'enter', target: 'alley', n: 1, text: 'ไปซอยแคบหลังตลาด', hint: 'กด 🗺️ เดินทาง แล้วเลือกซอยแคบหลังตลาด', reward: { items: { oliang: 2 } } },
+  { id: 'rats', on: 'kill', target: 'rat', n: 5, text: 'ปราบหนูท่อลมปราณ', hint: 'แตะที่หนูเพื่อล็อกเป้าแล้วตี', reward: { coins: 30, exp: 20 } },
+  { id: 'junk', on: 'have', target: 'junk', n: 5, text: 'เก็บเศษขยะให้ครบ', hint: 'หนูดรอปเศษขยะ 🥫 เดินไปเก็บได้เลย', reward: { exp: 15 } },
+  { id: 'vest', on: 'craft', target: 'vest_win', n: 1, text: 'ตัดเสื้อกั๊กวินกับช่างเจี๊ยบ', hint: 'ช่างเจี๊ยบอยู่ร้านตัดเสื้อแถวบนของตลาด', reward: { coins: 50 } },
+  { id: 'auto', on: 'auto', n: 1, text: 'ลองเปิดบอท 🤖 AUTO', hint: 'กดปุ่ม AUTO ตอนอยู่นอกตลาด บอทจะตีและเก็บของให้เอง', reward: { items: { oliang: 3 } } },
+  { id: 'level5', on: 'level', n: 5, text: 'ฝึกจนถึงเลเวล 5', hint: 'ตีหนู นกพิราบ หรือหมาในซอย', reward: { items: { chayen: 1 } } },
+  { id: 'bounty', on: 'bounty', n: 1, text: 'รับรางวัลจากกระดานรับงาน', hint: 'ดูงานที่กระดานในตลาด ทำให้ครบแล้วกลับไปกดรับ', reward: { coins: 60 } },
+  { id: 'fortune', on: 'fortune', n: 1, text: 'ไปเสี่ยงเซียมซีที่งานวัด', hint: 'ออกประตูซ้ายของตลาด แล้วไปที่โต๊ะธูปหน้าศาลเจ้า', reward: { coins: 50, exp: 30 } },
+];
+
 // หมากฮอสไทย at the market table: against ลุงชม (the bot) or another player.
 // Wins pay coins, for the first `dailyWins` wins of each Bangkok day.
 export const CHECKERS = {
@@ -457,6 +472,7 @@ export function newProfile(name) {
     equip: { weapon: 'broom', body: null, head: null, prop: null, pet: null },
     look: lookFromName(name),
     bounty: null, // { day, progress: { id: n }, claimed: [id] }
+    quest: { step: 0, n: 0 }, // เควสต์มือใหม่: TUTORIAL[step], n counted so far
   };
 }
 

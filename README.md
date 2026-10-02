@@ -55,6 +55,11 @@ starts with `blfs_`, so it can share a database with other apps.
 
 ## How to play
 
+- **📜 เควสต์มือใหม่:** new characters get a 9-step tutorial shown under the
+  character card. It walks them through buying โอเลี้ยง, the alley, rats,
+  junk, crafting the vest, AUTO, reaching Lv 5, the bounty board and the
+  temple fair, with a reward at every step. Tap it for a hint, or ✕ to skip.
+  Accounts already at Lv 5+ skip it.
 - **Tap/click the ground** to walk (server-side A* pathfinding).
 - **🗺️ เดินทาง** lists the exits of the room you're in; pick one and your character
   walks there. Arrows at the screen edge point to exits that are off-screen.
@@ -218,6 +223,7 @@ server/
   party.js         party invites, membership, party chat and member sync
   fair.js          temple fair: fortunes and their buffs, สอยดาว prizes, dance-off stage
   checkers.js      หมากฮอส matches: challenges, turns, timeouts, rewards
+  quests.js        เควสต์มือใหม่: tutorial steps, progress and rewards
   minigame.js      server-authoritative memory match
   auth.js          password hashing, login rate limiting
   store.js         player persistence (Postgres or JSON file)
@@ -276,7 +282,7 @@ Client → server: `hello {mode: login|register|session|recover, name, password?
 `emote {e}`, `auto {on, pct}`, `use {item}`, `buy {npc, item}`, `craft {id}`,
 `equip {item}`, `unequip {slot}`, `bounty_claim {id}`, `party_invite {name}`, `party_accept {from}`,
 `party_decline {from}`, `party_leave`, `party_kick {name}`, `stars_pick {i}`, `fortune_draw`, `ck_bot`,
-`ck_challenge {name}`, `ck_accept {from}`, `ck_decline {from}`, `ck_move {from, to}`, `ck_resign`, `mg_open`, `mg_flip {i}`,
+`ck_challenge {name}`, `ck_accept {from}`, `ck_decline {from}`, `ck_move {from, to}`, `ck_resign`, `quest_skip`, `mg_open`, `mg_flip {i}`,
 `mg_close`, `ping`.
 `chat {text, party: true}` goes to your party only.
 
@@ -284,4 +290,4 @@ Server → client: `welcome`, `room` (full room state), `join`/`leave`,
 `s` (delta snapshot `[id, x, y, hp, dir]`), `hit`, `die`, `gone`, `lvl`, `look`,
 `chat`, `emote`, `fx`, `me` (your private profile), `auto`, `toast`, `sys`,
 `announce` (server-wide, e.g. the world boss), `party` (member list, or `null`), `party_invite`,
-`stars` (prize), `fortune`, `ck` (หมากฮอส: `start` / `state` / `bad` / `end`), `ck_invite`, `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.
+`stars` (prize), `fortune`, `ck` (หมากฮอส: `start` / `state` / `bad` / `end`), `ck_invite`, `quest` (a tutorial step done), `stage` (dance-off: `start` / `call` / `hit` / `end`), `mg`, `error`.

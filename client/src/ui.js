@@ -1,4 +1,4 @@
-import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, WEAPONS, expToNext } from '/shared/constants.js';
+import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, TUTORIAL, WEAPONS, expToNext } from '/shared/constants.js';
 import { ROOMS } from '/shared/maps.js';
 import { Checkers } from './checkers.js';
 import { Fair } from './fair.js';
@@ -25,12 +25,7 @@ export class UI {
     this.bindHud();
     this.bindChat();
     net.on('me', (m) => this.setMe(m.me));
-    net.on('welcome', (m) => {
-      this.setMe(m.me);
-      if (m.me.level <= 3) {
-        setTimeout(() => this.toast('มือใหม่? กด 🗺️ เดินทาง เพื่อไปตีมอนสเตอร์ที่ซอยหลังตลาด'), 2500);
-      }
-    });
+    net.on('welcome', (m) => this.setMe(m.me));
     net.on('auto', (m) => this.setAuto(m));
     net.on('toast', (m) => this.toast(m.text));
     net.on('sys', (m) => this.log(`<i>${esc(m.text)}</i>`));
@@ -43,6 +38,19 @@ export class UI {
       ? `<span class="party">[ปาร์ตี้] <b>${esc(m.name)}:</b> ${esc(m.text)}</span>`
       : `<b>${esc(m.name)}:</b> ${esc(m.text)}`));
     net.on('party', (m) => this.setParty(m.party));
+    net.on('quest', (m) => {
+      this.toast(`✅ เควสต์: ${m.text} สำเร็จ!${m.reward ? ` รับ ${m.reward}` : ''}`);
+      this.log(`<b class="announce">📜 เควสต์มือใหม่: ${esc(m.text)} สำเร็จ!</b> ${esc(m.reward ?? '')}`);
+      if (m.last) setTimeout(() => this.toast('🎉 จบเควสต์มือใหม่แล้ว! ต่อไปลองไปริมคลอง (Lv 13+) หรือดวลหมากฮอสกับลุงชมดูนะ'), 1500);
+      $('#quest').classList.remove('pop');
+      void $('#quest').offsetWidth;
+      $('#quest').classList.add('pop');
+    });
+    $('#quest-skip').onclick = (ev) => {
+      ev.stopPropagation();
+      if (confirm('ข้ามเควสต์มือใหม่ทั้งหมด? (จะไม่ได้รางวัลที่เหลือ)')) this.net.send('quest_skip');
+    };
+    $('#quest').onclick = () => $('#quest').classList.toggle('open');
     net.on('party_invite', (m) => {
       this.invites = [...this.invites.filter((n) => n !== m.from), m.from];
       this.showInvite();
@@ -111,6 +119,7 @@ export class UI {
     this.drawHp();
     this.setAuto(me.auto);
     this.fair.showBuff(me.fortune);
+    this.showQuest(me.quest);
     this.fair.updateCoins();
     if (this.panel) this.renderPanel();
   }
@@ -355,6 +364,16 @@ export class UI {
         b.onclick = () => this.net.send('bounty_claim', { id: b.dataset.claim });
       });
     }
+  }
+
+  // Tracker under the character card: the current tutorial step.
+  showQuest(q) {
+    $('#quest').hidden = !q;
+    if (!q) return;
+    const s = TUTORIAL[q.step];
+    $('#quest-step').textContent = `${q.step + 1}/${q.total}`;
+    $('#quest-text').innerHTML = `${esc(s.text)}${q.need > 1 ? ` <em>${q.have}/${q.need}</em>` : ''}`;
+    $('#quest-hint').textContent = s.hint;
   }
 
   // ---------- party ----------

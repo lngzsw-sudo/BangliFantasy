@@ -9,6 +9,7 @@ import { claimBounty } from './bounty.js';
 import { Parties } from './party.js';
 import { drawFortune, pickStar } from './fair.js';
 import { CheckersHall } from './checkers.js';
+import { Quests } from './quests.js';
 import {
   LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
   newSessionToken, normalizeRecoveryCode, verifyPassword,
@@ -40,6 +41,7 @@ export class World {
     this.limiter = new LoginLimiter({ now });
     this.parties = new Parties(this);
     this.checkers = new CheckersHall(this);
+    this.quests = new Quests(this);
     this.lastPartySync = now();
     this.lastTick = now();
     this.lastSave = now();
@@ -196,6 +198,7 @@ export class World {
     const at = room.scatter(room.def.spawn);
     room.addPlayer(p, at.x, at.y);
     room.broadcast({ t: 'sys', text: `${profile.name} เข้ามาในตลาด` }, p.id);
+    this.quests.check(p);
     return p;
   }
 
@@ -237,6 +240,7 @@ export class World {
       p.send({ t: 'auto', on: false, pct: p.auto.pct });
     }
     to.addPlayer(p, x, y);
+    this.quests.event(p, 'enter', roomId);
   }
 
   respawn(p) {
@@ -348,6 +352,7 @@ const HANDLERS = {
     if (!this.nearObject(p, room, 'fortune')) return;
     const f = drawFortune(p.profile, now, this.rng);
     p.profileDirty = true;
+    this.quests.event(p, 'fortune');
     p.send({ t: 'fortune', ...f });
   },
 
@@ -360,6 +365,7 @@ const HANDLERS = {
     p.auto.on = !!on && !p.dead;
     if (!p.auto.on) p.target = null;
     p.send({ t: 'auto', on: p.auto.on, pct: p.auto.pct });
+    if (p.auto.on) this.quests.event(p, 'auto');
   },
 
   use(p, room, { item }, now) {
@@ -383,6 +389,7 @@ const HANDLERS = {
     p.profile.inv[item] = (p.profile.inv[item] ?? 0) + 1;
     p.profileDirty = true;
     p.send({ t: 'toast', text: `ซื้อ ${ITEMS[item].name} แล้ว` });
+    this.quests.event(p, 'buy', item);
   },
 
   craft(p, room, { id }) {
@@ -399,6 +406,7 @@ const HANDLERS = {
     inv[id] = 1;
     HANDLERS.equip.call(this, p, room, { item: id });
     p.send({ t: 'toast', text: `ตัด ${ITEMS[id].name} เสร็จแล้ว! ใส่ให้เลย ✨` });
+    this.quests.event(p, 'craft', id);
   },
 
   equip(p, room, { item }) {
@@ -423,6 +431,7 @@ const HANDLERS = {
     p.profile.coins += res.bounty.coins;
     room.grantExp(p, res.bounty.exp);
     p.send({ t: 'toast', text: `รับรางวัลแล้ว! 🪙 +${res.bounty.coins} · EXP +${res.bounty.exp}` });
+    this.quests.event(p, 'bounty');
   },
 
   // Forget this device ("remember me" token), e.g. before switching accounts.
@@ -486,6 +495,10 @@ const HANDLERS = {
 
   ck_resign(p) {
     this.checkers.resign(p);
+  },
+
+  quest_skip(p) {
+    this.quests.skip(p);
   },
 
   mg_open(p) {

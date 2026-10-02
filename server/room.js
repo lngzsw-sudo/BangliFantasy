@@ -7,6 +7,7 @@ import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
 import { recordKill, bountyView } from './bounty.js';
 import { addExp, killExp, randInt, rollDamage } from './combat.js';
 import { DanceStage, activeFortune, buffBonus } from './fair.js';
+import { questView } from './quests.js';
 
 let nextId = 1;
 export const newId = (prefix) => `${prefix}${nextId++}`;
@@ -228,6 +229,7 @@ export class GameRoom {
     for (const w of earners) {
       const bonus = 1 + buffBonus(w.profile, now, 'exp');
       this.grantExp(w, Math.round(killExp(m.def.exp, m.def.level, w.profile.level) * share * bonus));
+      this.world.quests.event(w, 'kill', m.type);
       for (const b of recordKill(w.profile, m.type, now)) {
         w.send({ t: 'toast', text: `📋 งาน "${bountyTitle(b)}" ครบแล้ว! กลับไปรับรางวัลที่กระดานในตลาด` });
       }
@@ -269,6 +271,7 @@ export class GameRoom {
       p.dirty = true;
       this.broadcast({ t: 'lvl', id: p.id, lvl: p.profile.level, maxHp: p.stats.maxHp });
       p.send({ t: 'toast', text: `เลเวลอัป! Lv.${before} → Lv.${p.profile.level}` });
+      this.world.quests.check(p);
     }
   }
 
@@ -430,6 +433,7 @@ export class GameRoom {
     else p.profile.inv[d.item] = (p.profile.inv[d.item] ?? 0) + d.amount;
     p.profileDirty = true;
     this.broadcast({ t: 'gone', id: d.id, by: p.id });
+    this.world.quests.check(p);
     if (p.goal && p.goalDrop === d.id) {
       p.goal = null;
       p.goalDrop = null;
@@ -671,6 +675,7 @@ export function selfView(p, now) {
     bounty: bountyView(p.profile, now),
     fortune: activeFortune(p.profile, now),
     checkersWins: p.profile.checkers?.day === bountyDay(now) ? p.profile.checkers.wins : 0,
+    quest: questView(p.profile),
   };
 }
 
