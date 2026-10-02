@@ -10,6 +10,7 @@ import { Parties } from './party.js';
 import { drawFortune, pickStar } from './fair.js';
 import { CheckersHall } from './checkers.js';
 import { Quests } from './quests.js';
+import { Achievements } from './achievements.js';
 import {
   LoginLimiter, PASSWORD_MAX, PASSWORD_MIN, SESSION_DAYS, hashPassword, hashSessionToken, newRecoveryCode,
   newSessionToken, normalizeRecoveryCode, verifyPassword,
@@ -42,6 +43,7 @@ export class World {
     this.parties = new Parties(this);
     this.checkers = new CheckersHall(this);
     this.quests = new Quests(this);
+    this.achievements = new Achievements(this);
     this.lastPartySync = now();
     this.lastTick = now();
     this.lastSave = now();
@@ -199,6 +201,7 @@ export class World {
     room.addPlayer(p, at.x, at.y);
     room.broadcast({ t: 'sys', text: `${profile.name} เข้ามาในตลาด` }, p.id);
     this.quests.check(p);
+    this.achievements.check(p);
     return p;
   }
 
@@ -345,6 +348,7 @@ const HANDLERS = {
     if (res.error) return p.send({ t: 'toast', text: res.error });
     p.profileDirty = true;
     p.send({ t: 'stars', i, ...res });
+    this.achievements.add(p, 'stars');
     if (res.rare && res.item) room.broadcast({ t: 'sys', text: `⭐ ${p.profile.name} สอยได้ ${res.text}!` });
   },
 
@@ -353,6 +357,7 @@ const HANDLERS = {
     const f = drawFortune(p.profile, now, this.rng);
     p.profileDirty = true;
     this.quests.event(p, 'fortune');
+    if (!f.again) this.achievements.add(p, 'fortunes');
     p.send({ t: 'fortune', ...f });
   },
 
@@ -390,6 +395,7 @@ const HANDLERS = {
     p.profileDirty = true;
     p.send({ t: 'toast', text: `ซื้อ ${ITEMS[item].name} แล้ว` });
     this.quests.event(p, 'buy', item);
+    this.achievements.check(p);
   },
 
   craft(p, room, { id }) {
@@ -407,6 +413,7 @@ const HANDLERS = {
     HANDLERS.equip.call(this, p, room, { item: id });
     p.send({ t: 'toast', text: `ตัด ${ITEMS[id].name} เสร็จแล้ว! ใส่ให้เลย ✨` });
     this.quests.event(p, 'craft', id);
+    this.achievements.check(p);
   },
 
   equip(p, room, { item }) {
@@ -499,6 +506,10 @@ const HANDLERS = {
 
   quest_skip(p) {
     this.quests.skip(p);
+  },
+
+  title_set(p, room, { id }) {
+    if (id === null || (typeof id === 'string' && id.length < 32)) this.achievements.setTitle(p, id);
   },
 
   mg_open(p) {

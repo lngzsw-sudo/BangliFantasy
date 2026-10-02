@@ -135,6 +135,7 @@ export class DanceStage {
     const results = rows.map(({ p, score }) => {
       const win = score === top && score >= STAGE.minTop;
       const coins = win ? STAGE.prizeTop : score * STAGE.perPoint;
+      if (win) this.room.world.achievements.add(p, 'danceWins');
       p.profile.coins += coins;
       p.profileDirty = true;
       p.send({ t: 'toast', text: win ? `🏆 ชนะประชันท่าเต้น! รับ 🪙 ${coins}` : `👏 ได้ ${score} แต้ม รับ 🪙 ${coins}` });
