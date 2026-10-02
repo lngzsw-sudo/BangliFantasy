@@ -217,15 +217,18 @@ export class WorldScene extends Phaser.Scene {
     this.decorViews?.forEach((d) => d.destroy());
     this.decorViews = [];
     this.fading = [];
-    for (const [kind, x, y, v = 0] of room.decor ?? []) {
+    for (const [kind, x, y, v = 0, words] of room.decor ?? []) {
       const def = DECOR[kind];
+      const art = DECOR_ART[kind];
       const key = decorKey(kind, v);
-      if (DECOR_ART[kind].flat) {
+      if (art.flat) {
         this.mapLayer.add(this.add.image(x * T, y * T, key).setOrigin(0).setScale(S));
+        if (words) this.mapLayer.add(this.signText(art, words, x * T, y * T));
         continue;
       }
       const ground = (y + 1) * T - 2 * S;
       const img = this.add.image((x + (def.w ?? 1) / 2) * T, ground, key).setOrigin(0.5, 1).setScale(S).setDepth((y + 0.8) * T);
+      if (words) this.decorViews.push(this.signText(art, words, img.x - (art.w / 2) * S, ground - art.h * S).setDepth(img.depth + 0.1));
       if (room.night) img.setTint(0xc8c0e0);
       if (def.bob) this.tweens.add({ targets: img, y: ground + S, duration: 1000 + ((x * 137) % 500), yoyo: true, repeat: -1, ease: 'Sine.inOut' });
       if (def.fade) this.fading.push(Object.assign(img, { box: img.getBounds() }));
@@ -233,6 +236,26 @@ export class WorldScene extends Phaser.Scene {
     }
     this.buildWires(room);
     if (room.night) this.buildNight(room);
+  }
+
+  // Words painted on a sign; (left, top) is the sign sprite's corner.
+  signText(art, words, left, top) {
+    const { S } = this;
+    const t = art.text;
+    const [main, sub] = words.split('\n');
+    const style = (size, color) => ({ fontFamily: FONT, fontStyle: 'bold', fontSize: `${size * S}px`, color, stroke: '#1f1a24', strokeThickness: S, align: 'center' });
+    const line = this.add.text(0, 0, main, style(t.size, t.color)).setOrigin(0.5, 0.5);
+    const parts = [line];
+    if (sub) {
+      const small = this.add.text(0, 0, sub, style(t.size2, t.color2 ?? t.color)).setOrigin(0.5, 0.5);
+      // Stack the two lines around the box centre.
+      const h1 = t.size * 1.25;
+      const h2 = t.size2 * 1.25;
+      line.y = (-(h1 + h2 + t.gap) / 2 + h1 / 2) * S;
+      small.y = line.y + ((h1 + h2) / 2 + t.gap) * S;
+      parts.push(small);
+    }
+    return this.add.container(left + t.x * S, top + t.y * S, parts);
   }
 
   // Where an overhead wire ties on: the top of a decor piece, a lantern post,

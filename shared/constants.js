@@ -55,6 +55,7 @@ export const ITEMS = {
   junk: { name: 'เศษขยะ', icon: '🥫', desc: 'วัตถุดิบคราฟต์ชุดแฟชั่น' },
   oliang: { name: 'โอเลี้ยง', icon: '🧋', desc: 'ฟื้น HP 45', heal: 45, use: true },
   chayen: { name: 'ชาเย็น', icon: '🥤', desc: 'ฟื้น HP 150 — สำหรับริมคลอง', heal: 150, use: true },
+  bualoy: { name: 'บัวลอยมะพร้าวอ่อน', icon: '🥥', desc: 'ฟื้น HP 400 — ของขึ้นชื่อตลาดบางลี่ หอมกะทิ เนื้อมะพร้าวอ่อนเต็มถ้วย', heal: 400, use: true },
   broom: { name: WEAPONS.broom.name, icon: '🧹', desc: WEAPONS.broom.desc, slot: 'weapon' },
   spatula: { name: WEAPONS.spatula.name, icon: '🍳', desc: WEAPONS.spatula.desc, slot: 'weapon' },
   umbrella: { name: WEAPONS.umbrella.name, icon: '⛱️', desc: WEAPONS.umbrella.desc, slot: 'weapon' },
@@ -122,6 +123,7 @@ export const SHOPS = {
   cafe: { oliang: 10, chayen: 35, prop_oliang: 60 },
   grocery: { spatula: 120, umbrella: 100, broom: 30, prop_fan: 150 },
   pets: { pet_chick: 350, pet_cat: 500, pet_dog: 800 },
+  dessert: { bualoy: 90 },
 };
 
 // Grind-to-drip: farmed materials + coins -> fashion.

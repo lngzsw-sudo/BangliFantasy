@@ -239,12 +239,13 @@ export class UI {
     const title = $('#panel-title');
     const body = $('#panel-body');
     const coins = `<div class="wallet">🪙 ${me.coins} · 🥫 เศษขยะ ${me.inv.junk ?? 0}</div>`;
-    if (p.kind === 'cafe' || p.kind === 'grocery' || p.kind === 'pets') {
+    if (p.kind === 'cafe' || p.kind === 'grocery' || p.kind === 'pets' || p.kind === 'dessert') {
       title.textContent = p.npc.name;
       const greeting = {
         cafe: 'โอเลี้ยงเย็นๆ ไหมลูก? กินแล้วตีหนูมันส์',
         grocery: 'ของครบ ราคาเป็นกันเอง เลือกได้เลยเฮีย',
         pets: 'น้องๆ พร้อมไปอยู่บ้านใหม่จ้ะ รับไปเลี้ยงแล้วเดินตามต้อยๆ เลย',
+        dessert: 'บัวลอยมะพร้าวอ่อนร้อนๆ จ้า มาบางลี่ทั้งทีต้องกินให้ได้สักถ้วย',
       }[p.kind];
       body.innerHTML = `<p class="npc-say">“${greeting}”</p>${coins}` + Object.entries(SHOPS[p.kind]).map(([id, price]) => {
         const item = ITEMS[id];

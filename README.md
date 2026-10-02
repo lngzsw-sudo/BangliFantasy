@@ -105,7 +105,7 @@ starts with `blfs_`, so it can share a database with other apps.
 
 - **🤖 AUTO** (outside the market) makes the bot hunt the nearest monster, loot
   your own drops, and drink below the HP % you set in 🎒. It picks the drink that
-  best fits the HP you're missing: โอเลี้ยง heals 45, ชาเย็น heals 150. It won't
+  best fits the HP you're missing: โอเลี้ยง heals 45, ชาเย็น 150 and บัวลอยมะพร้าวอ่อน 400. It won't
   start fights more than 2 levels above you, but it fights back if bitten. The
   bot runs on the server, so it keeps farming while the tab is in the background.
 - EXP from a monster drops once you out-level it by more than 3, so each area
@@ -177,7 +177,8 @@ starts with `blfs_`, so it can share a database with other apps.
   level-ups, drinks, portals, quests, สอยดาว, เซียมซี, the dance-off and
   หมากฮอส. Music and effects can each be switched off in 🎒.
 - **Enter** to chat, **1** to drink a potion, **Esc** to close panels.
-- **NPCs in the market:** ป้าศรี (โอเลี้ยง and ชาเย็น), เฮียเล้ง (weapons: broom, spatula, umbrella)
+- **NPCs in the market:** ป้าศรี (โอเลี้ยง and ชาเย็น), ยายบัว (บัวลอยมะพร้าวอ่อน, Bang Li's
+  famous dessert, 90 coins), เฮียเล้ง (weapons: broom, spatula, umbrella)
   and ช่างเจี๊ยบ, who crafts fashion from farmed materials: the **orange
   motorbike-taxi vest** (5 junk + 50 coins) and the **straw hat with a pigeon
   feather** (6 feathers + 2 bones + 80 coins). From the canal: the **woven
@@ -294,7 +295,12 @@ Characters, monsters, drops and weapons are ASCII pixel art in
 Each look and outfit combination is turned into a texture the first time it's
 needed.
 
-**Scenery.** Each room lists `decor` pieces (`[kind, x, y, variant]`) and
+**Bang Li touches.** The market is ringed by two-storey wooden shophouses
+(`Y` upper floors, `Q` บานเฟี้ยม folding plank doors) under its name board,
+"ตลาดบางลี่ · ตลาดร้อยปี · สองพี่น้อง". The canal has a คลองสองพี่น้อง sign and a
+ก๋วยเตี๋ยวเรือ noodle boat.
+
+**Scenery.** Each room lists `decor` pieces (`[kind, x, y, variant, text]`) and
 overhead `wires` in `shared/maps.js`; their sprites are drawn in code in
 `client/src/decor.js`.
 - Blocking pieces (a ศาลพระภูมิ, a power pole, a dragon jar) count as walls on

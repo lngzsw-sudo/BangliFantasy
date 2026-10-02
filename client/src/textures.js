@@ -367,6 +367,55 @@ function drawTile(ctx, ch, theme, v, f = 0) {
       speckle(ctx, rnd, ['#fff3d6', '#ffe066'], 4);
       if (v === 2) fill('#ff6b8b', 0, 0, S, 1), fill('#6dff8a', 0, 1, S, 1);
       break;
+    case 'Y': {
+      // ห้องแถวไม้ชั้นบน: plank wall under a tin eave, fretwork vents and teal shutters.
+      fill('#8b5a33');
+      for (let y = 6; y < S; y += 4) fill('#6b4226', 0, y + 3, S, 1), fill('#9a6a3c', 0, y, S, 1);
+      fill('#5f656d', 0, 0, S, 5);
+      for (let x = 0; x < S; x += 3) fill('#9aa3ad', x, 0, 1, 4);
+      fill('#3b3f47', 0, 5, S, 1);
+      for (let x = 2; x < S; x += 4) fill('#fff3d6', x, 7, 2, 2), fill('#6b4226', x + 1, 8, 1, 1); // ช่องลมฉลุ
+      if (v !== 2) {
+        fill(OUTLINE, 9, 12, 14, 15);
+        fill('#2a1c14', 10, 13, 12, 13);
+        fill('#ffe8a3', 11, 14, 4, 5);
+        // folded-back shutters either side
+        fill(OUTLINE, 4, 12, 5, 15), fill('#3f8a7a', 5, 13, 3, 13), fill('#5fb0a0', 5, 13, 1, 13);
+        fill(OUTLINE, 23, 12, 5, 15), fill('#3f8a7a', 24, 13, 3, 13), fill('#2f6a5e', 26, 13, 1, 13);
+        fill('#5e3e22', 8, 27, 16, 2);
+        if (v === 1) fill('#f07ab0', 11, 20, 4, 6), fill('#3b82c4', 16, 21, 4, 5); // washing on the sill
+      } else {
+        fill(OUTLINE, 6, 12, 20, 14), fill('#f4f1c0', 7, 13, 18, 12);
+        fill('#d94f4f', 9, 15, 6, 2), fill('#d94f4f', 16, 15, 7, 2), fill('#3b82c4', 10, 19, 12, 2);
+      }
+      break;
+    }
+    case 'Q': {
+      // บานเฟี้ยม: folding plank doors of a wooden shophouse, raised on a step.
+      fill('#4a2c18');
+      for (let x = 0; x < S; x += 4) {
+        fill(x % 8 ? '#a8703f' : '#9a6436', x, 0, 3, 26);
+        fill('#c88a50', x, 0, 1, 26);
+      }
+      fill('#6b4226', 0, 8, S, 1), fill('#6b4226', 0, 18, S, 1);
+      fill('#c9c2b4', 0, 26, S, 6), fill('#e6e0d4', 0, 26, S, 1), fill('#9a948a', 0, 31, S, 1);
+      if (v === 0) {
+        // red paper couplets for good luck
+        fill('#d94f4f', 5, 2, 4, 14), fill('#d94f4f', 23, 2, 4, 14);
+        for (let y = 4; y < 15; y += 3) fill('#ffd23f', 6, y, 2, 1), fill('#ffd23f', 24, y, 2, 1);
+        fill('#d94f4f', 11, 1, 10, 4), fill('#ffd23f', 13, 2, 6, 2);
+      } else if (v === 1) {
+        // two leaves folded open: a dim shop with jars on a shelf
+        fill('#2a1c14', 8, 0, 16, 26);
+        fill('#6b4226', 8, 12, 16, 2), fill('#6b4226', 8, 22, 16, 2);
+        for (const x of [10, 15, 20]) fill('#c9ced6', x, 7, 3, 5), fill('#e0453a', x, 6, 3, 1), fill('#ffd23f', x - 1, 17, 4, 5);
+      } else {
+        // a hanging vertical shop sign
+        fill(OUTLINE, 12, 1, 9, 22), fill('#f4f1c0', 13, 2, 7, 20);
+        for (let y = 4; y < 20; y += 4) fill('#d94f4f', 14, y, 5, 2);
+      }
+      break;
+    }
     case 'P':
       // Portal: glowing violet whirl.
       fill('#6a3fa6');
@@ -392,7 +441,7 @@ export function tileKey(ch, theme, v, f = 0) {
 export function makeTextures(scene) {
   const tex = scene.textures;
   for (const theme of Object.keys(THEMES)) {
-    for (const ch of '.,=#ATtBKN~PWsHGrFCRSJlD') {
+    for (const ch of '.,=#ATtBKN~PWsHGrFCRSJlDYQ') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
         for (let f = 0; f < ('~s'.includes(ch) ? WATER_FRAMES : 1); f++) {
           const c = canvas(TILE, TILE);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { MINIGAME, RECIPES } from '../shared/constants.js';
+import { ITEMS, MINIGAME, RECIPES, SHOPS, playerStats } from '../shared/constants.js';
 import { addExp, killExp, rollDamage } from '../server/combat.js';
 import { MemoryMatch } from '../server/minigame.js';
 import { cleanChat } from '../server/world.js';
@@ -222,6 +222,26 @@ test('buying potions and weapons at the right NPC', async () => {
   assert.equal(p.profile.inv.spatula, undefined, 'cafe does not sell weapons');
   a.client.message({ t: 'buy', npc: 'grocery', item: 'spatula' });
   assert.equal(p.profile.inv.spatula, undefined, 'too far from the grocery');
+});
+
+test('ยายบัว sells บัวลอยมะพร้าวอ่อน, the strongest drink', async () => {
+  const { world } = makeWorld();
+  const a = await join(world, 'คนชอบบัวลอย');
+  const p = a.player();
+  const npc = world.rooms.get('market').def.npcs.find((n) => n.kind === 'dessert');
+  p.x = npc.x;
+  p.y = npc.y + 1;
+  p.profile.coins = 100;
+  a.client.message({ t: 'buy', npc: 'dessert', item: 'bualoy' });
+  assert.equal(p.profile.inv.bualoy, 1);
+  assert.equal(p.profile.coins, 100 - SHOPS.dessert.bualoy);
+  assert.equal(ITEMS.bualoy.heal, Math.max(...Object.values(ITEMS).map((i) => i.heal ?? 0)));
+  p.profile.level = 30;
+  p.stats = playerStats(p.profile);
+  p.hp = 1;
+  a.client.message({ t: 'use', item: 'bualoy' });
+  assert.equal(p.profile.inv.bualoy, 0);
+  assert.equal(p.hp, 1 + ITEMS.bualoy.heal);
 });
 
 test('minigame over the wire pays coins', async () => {
