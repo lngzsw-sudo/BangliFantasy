@@ -62,6 +62,7 @@ export class Fair {
 
   onStar(m) {
     this.pending = null;
+    this.ui.sound.sfx(m.rare ? 'quest' : 'star');
     const b = $('#stars-grid').children[m.i];
     if (b) {
       b.classList.add('open');
@@ -77,6 +78,7 @@ export class Fair {
   // ---------- เซียมซี ----------
 
   showFortune(f) {
+    this.ui.sound.sfx('fortune');
     $('#fortune-title').textContent = f.again ? `วันนี้เสี่ยงไปแล้ว: ใบที่ ${f.stick}` : `เซียมซีใบที่ ${f.stick}`;
     $('#fortune-text').textContent = `“${f.text}”`;
     $('#fortune-buff').textContent = `บัฟวันนี้: ${BUFF_LABELS[f.buff]} +${Math.round(f.v * 100)}% ถึงเที่ยงคืน`;
@@ -96,6 +98,7 @@ export class Fair {
     if (m.ev === 'start') {
       this.ui.toast('🎤 ประชันท่าเต้นเริ่มแล้ว! ขึ้นเวทีแล้วทำท่าตามดีเจ');
     } else if (m.ev === 'call') {
+      this.ui.sound.sfx('call');
       const e = EMOTES[m.e];
       $('#stage-step').textContent = `ท่าที่ ${m.i}/${m.n}: ทำท่านี้เลย!`;
       $('#stage-move').textContent = `${e.icon} ${e.label}`;
@@ -110,6 +113,7 @@ export class Fair {
       // On stage? Open the emote menu so the move is one tap away.
       if (this.onStageNow()) $('#emotes').classList.add('open');
     } else if (m.ev === 'hit') {
+      this.ui.sound.sfx(m.ok ? 'good' : 'bad');
       this.ui.toast(m.ok ? `✅ ถูก! ${m.score} แต้ม` : '❌ ผิดท่า!');
       $('#emotes').classList.remove('open');
     } else if (m.ev === 'end') {

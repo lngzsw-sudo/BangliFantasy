@@ -1,5 +1,6 @@
 import { EMOTES, FASHION_SLOTS, ITEMS, MONSTERS, RECIPES, SHOPS, STAGE, TUTORIAL, WEAPONS, expToNext } from '/shared/constants.js';
 import { ROOMS } from '/shared/maps.js';
+import { Sound } from './audio.js';
 import { Checkers } from './checkers.js';
 import { Fair } from './fair.js';
 import { Minigame } from './minigame.js';
@@ -19,6 +20,9 @@ export class UI {
     this.party = null; // { leader, members: [{ id, name, lvl, hp, maxHp, room, dead }] }
     this.partyIds = new Set();
     this.invites = []; // names of players who invited us, newest last
+    this.sound = new Sound();
+    // Browsers only start audio from a user gesture.
+    for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => this.sound.unlock(), true);
     this.minigame = new Minigame(net, this);
     this.fair = new Fair(net, this);
     this.checkers = new Checkers(net, this);
@@ -31,6 +35,7 @@ export class UI {
     net.on('sys', (m) => this.log(`<i>${esc(m.text)}</i>`));
     // Server-wide news (world boss timetable): chat log + toast wherever you are.
     net.on('announce', (m) => {
+      this.sound.sfx('announce');
       this.log(`<b class="announce">${esc(m.text)}</b>`);
       this.toast(m.text);
     });
@@ -39,6 +44,7 @@ export class UI {
       : `<b>${esc(m.name)}:</b> ${esc(m.text)}`));
     net.on('party', (m) => this.setParty(m.party));
     net.on('quest', (m) => {
+      this.sound.sfx('quest');
       this.toast(`✅ เควสต์: ${m.text} สำเร็จ!${m.reward ? ` รับ ${m.reward}` : ''}`);
       this.log(`<b class="announce">📜 เควสต์มือใหม่: ${esc(m.text)} สำเร็จ!</b> ${esc(m.reward ?? '')}`);
       if (m.last) setTimeout(() => this.toast('🎉 จบเควสต์มือใหม่แล้ว! ต่อไปลองไปริมคลอง (Lv 13+) หรือดวลหมากฮอสกับลุงชมดูนะ'), 1500);
@@ -283,6 +289,10 @@ export class UI {
           <span>Lv.${me.level}</span><span>ATK ${s.atk}</span><span>DEF ${s.def}</span>
           <span>ASPD ${s.aspd}</span><span>CRIT ${Math.round(s.crit * 100)}%</span>
         </div>${coins}
+        <div class="sound-cfg">
+          <label><input id="cfg-music" type="checkbox" ${this.sound.musicOn ? 'checked' : ''}> 🎵 เพลง</label>
+          <label><input id="cfg-sfx" type="checkbox" ${this.sound.sfxOn ? 'checked' : ''}> 🔊 เสียงเอฟเฟกต์</label>
+        </div>
         <label class="bot-cfg">🤖 บอทกินโอเลี้ยงเมื่อ HP ต่ำกว่า <b id="pct-val">${me.auto.pct}%</b>
           <input id="pct" type="range" min="0" max="90" step="5" value="${me.auto.pct}"></label>
         ${items}
@@ -295,6 +305,8 @@ export class UI {
           <small>ทำรหัสกู้คืนหาย? ขอรหัสใหม่ได้ รหัสเดิมจะใช้ไม่ได้อีก</small>
           <button id="btn-logout" type="button" class="danger">ออกจากระบบ</button>
         </div>`;
+      $('#cfg-music').onchange = (ev) => this.sound.setMusic(ev.target.checked);
+      $('#cfg-sfx').onchange = (ev) => this.sound.setSfx(ev.target.checked);
       $('#pct').oninput = (ev) => ($('#pct-val').textContent = `${ev.target.value}%`);
       $('#pct').onchange = (ev) => this.net.send('auto', { on: me.auto.on, pct: Number(ev.target.value) });
       body.querySelectorAll('[data-use]').forEach((b) => (b.onclick = () => this.net.send('use', { item: b.dataset.use })));

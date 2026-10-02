@@ -159,6 +159,11 @@ starts with `blfs_`, so it can share a database with other apps.
   - Type **/p message** to chat with your party from any room.
   - Parties aren't saved: logging out leaves the party, and a party with one
     member left breaks up.
+- **🎵 Sound:** every room has its own chiptune loop (a ลูกทุ่ง-style
+  market, a sneaky alley, a mellow canal, driving suburbs, and a หมอลำ
+  temple fair with a แคน drone and ฉิ่ง). There are effects for hits, coins,
+  level-ups, drinks, portals, quests, สอยดาว, เซียมซี, the dance-off and
+  หมากฮอส. Music and effects can each be switched off in 🎒.
 - **Enter** to chat, **1** to drink a potion, **Esc** to close panels.
 - **NPCs in the market:** ป้าศรี (โอเลี้ยง and ชาเย็น), เฮียเล้ง (weapons: broom, spatula, umbrella)
   and ช่างเจี๊ยบ, who crafts fashion from farmed materials: the **orange
@@ -207,6 +212,8 @@ client/            static, no build step: served as ES modules
   src/minigame.js  close-up card-matching overlay
   src/fair.js      temple fair: สอยดาว board, เซียมซี card, dance-off calls
   src/checkers.js  หมากฮอส close-up board, challenges, table lobby
+  src/audio.js     Web Audio synth: room music player and sound effects
+  src/music.js     the room songs as note text (tested in node)
   src/art.js       pixel art as ASCII data (characters, monsters, drops, weapons)
   src/textures.js  turns art + procedural tiles into Phaser textures at runtime
 shared/            imported by both server and browser
@@ -260,6 +267,12 @@ implementations: `PgStore`, which keeps each account as a row with the
 profile in a JSONB column, and `JsonStore` for local play. Profiles save on
 disconnect and every 30 s, and writes for the same account are queued so they
 land in order.
+
+**Sound.** There are no audio files either. Songs are note text in
+`client/src/music.js` (eighth-note steps such as `E5 ~ G5 -`), played by a
+small Web Audio sequencer in `client/src/audio.js` with square, triangle and
+sawtooth voices plus filtered noise for drums. Effects are synthesised the
+same way. Audio starts on the first tap or key press, as browsers require.
 
 **Art.** There are no image files, so nothing extra to download.
 Characters, monsters, drops and weapons are ASCII pixel art in
