@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ITEMS, MONSTERS, RECIPES, SHOPS, expToNext, lookFromName, playerStats, newProfile } from '../shared/constants.js';
-import { ROOMS, TILES, buildBlockedGrid, portalAt, tileAt } from '../shared/maps.js';
+import { DECOR, ROOMS, TILES, buildBlockedGrid, portalAt, tileAt } from '../shared/maps.js';
 import { findPath, isBlocked, nearestOpen } from '../shared/pathfinding.js';
 
 test('every map is rectangular and uses known tiles', () => {
@@ -78,4 +78,33 @@ test('stats and exp curve grow with level', () => {
   assert.ok(s5.maxHp > s1.maxHp && s5.atk > s1.atk);
   assert.ok(expToNext(2) > expToNext(1));
   assert.deepEqual(lookFromName('abc'), lookFromName('abc'));
+});
+
+test('decor: known kinds with art, on the right tiles, and wires tie to something', async () => {
+  const { DECOR_ART } = await import('../client/src/decor.js');
+  for (const kind of Object.keys(DECOR)) assert.ok(DECOR_ART[kind], `art for ${kind}`);
+  for (const room of Object.values(ROOMS)) {
+    for (const [kind, x, y, v = 0] of room.decor ?? []) {
+      const def = DECOR[kind];
+      assert.ok(def, `${room.id} unknown decor ${kind}`);
+      assert.ok(v < (DECOR_ART[kind].variants ?? 1), `${room.id} ${kind} variant ${v}`);
+      for (let i = 0; i < (def.w ?? 1); i++) {
+        const ch = tileAt(room, x + i, y);
+        if (kind === 'ac' || kind === 'shutter') assert.equal(ch, '#', `${room.id} ${kind} at ${x + i},${y} hangs on a wall`);
+        else if (kind === 'boat' || kind === 'lotus') assert.ok('~s'.includes(ch), `${room.id} ${kind} at ${x + i},${y} floats`);
+        else assert.ok(!TILES[ch].block, `${room.id} ${kind} at ${x + i},${y} stands on open ground`);
+        assert.ok(!room.portals.some((p) => x + i >= p.x && x + i < p.x + p.w && y >= p.y && y < p.y + p.h), `${room.id} ${kind} on a portal`);
+      }
+    }
+    for (const wire of room.wires ?? []) {
+      for (const [x, y] of [wire.from, wire.to]) {
+        const tied = (room.decor ?? []).some(([k, dx, dy]) => dx === x && dy === y && DECOR_ART[k].top > 0) || tileAt(room, x, y) === 'l';
+        assert.ok(tied || wire.kind === 'laundry', `${room.id} ${wire.kind} wire end ${x},${y}`);
+      }
+    }
+  }
+  // Blocking decor really blocks.
+  const grid = buildBlockedGrid(ROOMS.market);
+  const [, bx, by] = ROOMS.market.decor.find(([k]) => k === 'bodhi');
+  assert.equal(grid[by][bx], true);
 });

@@ -228,9 +228,10 @@ client/            static, no build step: served as ES modules
   src/music.js     the room songs as note text (tested in node)
   src/art.js       pixel art as ASCII data (characters, monsters, drops, weapons)
   src/textures.js  turns art + procedural tiles into Phaser textures at runtime
+  src/decor.js     scenery sprites (spirit house, bodhi tree, power poles...) and tile-edge overlays
 shared/            imported by both server and browser
   constants.js     items, weapons, monsters, shops, recipes, stat formulas
-  maps.js          ASCII room maps, portals, NPCs, spawn zones
+  maps.js          ASCII room maps, portals, NPCs, spawn zones, scenery (decor, wires)
   pathfinding.js   8-direction A*
   checkers.js      หมากฮอสไทย rules and the ลุงชม bot
 server/
@@ -292,6 +293,22 @@ Characters, monsters, drops and weapons are ASCII pixel art in
 `client/src/art.js`, and tiles are drawn in code in `client/src/textures.js`.
 Each look and outfit combination is turned into a texture the first time it's
 needed.
+
+**Scenery.** Each room lists `decor` pieces (`[kind, x, y, variant]`) and
+overhead `wires` in `shared/maps.js`; their sprites are drawn in code in
+`client/src/decor.js`.
+- Blocking pieces (a ศาลพระภูมิ, a power pole, a dragon jar) count as walls on
+  the server.
+- Flat ones (flowers, puddles, lotus pads, shutters on walls) lie under
+  everyone.
+- Tall ones are depth-sorted with players, and the bodhi tree and poles turn
+  see-through while you stand behind them.
+- The map also gets its edges softened: shadows under walls and awnings,
+  grass spilling onto paths, river banks with foam, and bunds round the rice
+  fields.
+- Water glints pulse.
+- Rooms marked `night` (the temple fair) are darkened, with glowing lanterns,
+  string lights and sweeping stage lights.
 
 - **Sizes:** a map tile is 32×32 art pixels. Characters and monsters are 32×32
   with their feet on the bottom row, and ground drops are 16×16. Bosses are

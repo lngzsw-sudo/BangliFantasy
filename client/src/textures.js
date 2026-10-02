@@ -3,6 +3,7 @@ import {
   BODY_OVERLAYS, CHAR_FRAMES, DROP, DROP_ART, HEAD_BOB, MONSTER_ART, OUTLINE, PET_ART, PROP_ART, SPRITE, WEAPON_ART,
   characterPalette, paint, shade,
 } from './art.js';
+import { makeDecorTextures } from './decor.js';
 
 // Every texture is generated at startup from code — no image files to load.
 // Tiles are TILE (32) art pixels square; sprites come from art.js.
@@ -38,9 +39,12 @@ const THEMES = {
 };
 
 const BULBS = ['#ffe066', '#ff6b8b', '#6dff8a', '#7cc7ff', '#ffb020'];
+// Water glint lengths; each animation frame shifts which glint is long.
+const GLINT = [6, 4, 2];
 
-// Draw one 32x32 tile variant. `v` picks a noise seed so floors don't look tiled.
-function drawTile(ctx, ch, theme, v) {
+// Draw one 32x32 tile variant. `v` picks a noise seed so floors don't look tiled;
+// `f` is the animation frame for water, whose glints pulse.
+function drawTile(ctx, ch, theme, v, f = 0) {
   const t = THEMES[theme];
   const rnd = seeded(ch.charCodeAt(0) * 131 + v * 977 + 7);
   const S = TILE;
@@ -199,9 +203,12 @@ function drawTile(ctx, ch, theme, v) {
       fill('#5f9ea0');
       speckle(ctx, rnd, ['#56918f', '#6aabab'], 40);
       ctx.fillStyle = '#8cc6c4';
-      for (let i = 0; i < 4; i++) ctx.fillRect(2 + ((i * 9 + v * 5) % 24), 3 + i * 8, 6, 1);
+      for (let i = 0; i < 4; i++) {
+        const len = GLINT[(i + f) % GLINT.length];
+        ctx.fillRect(2 + ((i * 9 + v * 5) % 24) + ((6 - len) >> 1), 3 + i * 8, len, 1);
+      }
       ctx.fillStyle = '#4f8e90';
-      for (let i = 0; i < 4; i++) ctx.fillRect(4 + ((i * 11 + v * 7) % 24), 5 + i * 8, 5, 1);
+      for (let i = 0; i < 4; i++) ctx.fillRect(4 + ((i * 11 + v * 7) % 24) + f, 5 + i * 8, 5, 1);
       if (v === 1) fill('#6a9a3e', 20, 20, 5, 3), fill('#7ab04a', 21, 20, 3, 1), fill('#5f9ea0', 22, 21, 1, 2);
       break;
     case 'H':
@@ -231,7 +238,7 @@ function drawTile(ctx, ch, theme, v) {
       }
       speckle(ctx, rnd, ['#a0522d', '#9aa3ad'], 16);
       fill('#5f656d', 0, 15, S, 1), fill('#9aa3ad', 0, 16, S, 1);
-      if (v === 2) fill(OUTLINE, 8, 10, 16, 14), fill('#3b3f47', 9, 11, 14, 12), fill('#6e7682', 9, 11, 14, 1);
+      if (v === 2) fill('#5f656d', 6, 4, 20, 1), fill('#9aa3ad', 6, 5, 20, 1); // a roof seam; doors come from the edge overlay
       break;
     case 'r':
       // นาข้าว: rows of rice in muddy water.
@@ -248,12 +255,13 @@ function drawTile(ctx, ch, theme, v) {
       speckle(ctx, rnd, ['#33658a', '#4279a0'], 50);
       ctx.fillStyle = '#6aa3c4';
       for (let i = 0; i < 4; i++) {
-        const x = 2 + ((i * 11 + v * 7) % 22);
-        ctx.fillRect(x, 4 + i * 8, 6, 1);
-        ctx.fillRect(x + 2, 3 + i * 8, 3, 1);
+        const len = GLINT[(i + f) % GLINT.length];
+        const x = 2 + ((i * 11 + v * 7) % 22) + ((6 - len) >> 1);
+        ctx.fillRect(x, 4 + i * 8, len, 1);
+        if (len > 3) ctx.fillRect(x + 1, 3 + i * 8, len - 3, 1);
       }
       ctx.fillStyle = '#2e5c78';
-      for (let i = 0; i < 3; i++) ctx.fillRect(6 + ((i * 13 + v * 5) % 20), 8 + i * 9, 7, 1);
+      for (let i = 0; i < 3; i++) ctx.fillRect(6 + ((i * 13 + v * 5) % 20) + f, 8 + i * 9, 7, 1);
       break;
     case 'F':
       // ซุ้มงานวัด: string of coloured bulbs over a shelf of prizes.
@@ -375,9 +383,10 @@ function drawTile(ctx, ch, theme, v) {
 }
 
 export const TILE_VARIANTS = 3;
+export const WATER_FRAMES = 3;
 
-export function tileKey(ch, theme, v) {
-  return `tile_${theme}_${ch.charCodeAt(0)}_${v}`;
+export function tileKey(ch, theme, v, f = 0) {
+  return `tile_${theme}_${ch.charCodeAt(0)}_${v}${f ? `_f${f}` : ''}`;
 }
 
 export function makeTextures(scene) {
@@ -385,9 +394,11 @@ export function makeTextures(scene) {
   for (const theme of Object.keys(THEMES)) {
     for (const ch of '.,=#ATtBKN~PWsHGrFCRSJlD') {
       for (let v = 0; v < TILE_VARIANTS; v++) {
-        const c = canvas(TILE, TILE);
-        drawTile(c.getContext('2d'), ch, theme, v);
-        tex.addCanvas(tileKey(ch, theme, v), c);
+        for (let f = 0; f < ('~s'.includes(ch) ? WATER_FRAMES : 1); f++) {
+          const c = canvas(TILE, TILE);
+          drawTile(c.getContext('2d'), ch, theme, v, f);
+          tex.addCanvas(tileKey(ch, theme, v, f), c);
+        }
       }
     }
   }
@@ -428,6 +439,7 @@ export function makeTextures(scene) {
   sctx.fillRect(2, 1, 20, 6);
   sctx.fillRect(0, 2, 24, 4);
   tex.addCanvas('shadow', sh);
+  makeDecorTextures(tex);
 }
 
 // Characters are generated per look/outfit combination on first use.
