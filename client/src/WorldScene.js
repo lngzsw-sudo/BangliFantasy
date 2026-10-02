@@ -1,7 +1,8 @@
 import { EMOTES, ITEMS, NPC_RANGE, TILE } from '/shared/constants.js';
-import { ROOMS, roomSize, tileAt } from '/shared/maps.js';
+import { DECOR, ROOMS, roomSize, tileAt } from '/shared/maps.js';
 import { CHAR_HEAD, HAND_X, HAND_Y, MONSTER_ART, PROP_ART } from './art.js';
-import { TILE_VARIANTS, characterTexture, makeTextures, tileKey } from './textures.js';
+import { DECOR_ART, GRASS, SHADOW_CASTERS, WATER, decorKey } from './decor.js';
+import { TILE_VARIANTS, WATER_FRAMES, characterTexture, makeTextures, tileKey } from './textures.js';
 
 export const FONT = '"Mitr", "Noto Sans Thai", "Leelawadee UI", Tahoma, sans-serif';
 // Screen pixels per CSS pixel. The canvas is drawn at this density, so sizes
@@ -11,6 +12,8 @@ const U = DPR;
 const WALK_FRAME_MS = 140;
 const BUBBLE_MS = 5000;
 const PET_SPEED = 5; // tiles per second when catching up with the owner
+const WATER_FRAME_MS = 500;
+const SIDES = [['t', 0, -1], ['b', 0, 1], ['l', -1, 0], ['r', 1, 0]];
 const OBJECT_LABELS = { minigame: '🎴 เล่นมินิเกม', bounty: '📋 กระดานรับงาน', stars: '⭐ สอยดาว', fortune: '🧧 เซียมซี', checkers: '♟️ หมากฮอส' };
 
 // Text styles are given in CSS pixels.
@@ -40,6 +43,8 @@ export class WorldScene extends Phaser.Scene {
     makeTextures(this);
     this.S = this.pickScale();
     this.fxLayer = this.add.container(0, 0).setDepth(1e6);
+    this.waterFrame = 0;
+    this.time.addEvent({ delay: WATER_FRAME_MS, loop: true, callback: () => this.flowWater() });
     this.input.on('pointerdown', (pointer) => this.onPointer(pointer));
     this.scale.on('resize', () => {
       const s = this.pickScale();
@@ -114,13 +119,18 @@ export class WorldScene extends Phaser.Scene {
     const room = this.room;
     const { w, h } = roomSize(room);
     this.mapLayer = this.add.container(0, 0).setDepth(-1);
+    this.water = [];
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const ch = tileAt(room, x, y);
         const v = (x * 7 + y * 13 + ((x * y) % 5)) % TILE_VARIANTS;
-        this.mapLayer.add(this.add.image(x * T, y * T, tileKey(ch, room.theme, v)).setOrigin(0).setScale(S));
+        const img = this.add.image(x * T, y * T, tileKey(ch, room.theme, v, WATER.includes(ch) ? this.waterFrame : 0)).setOrigin(0).setScale(S);
+        this.mapLayer.add(img);
+        if (WATER.includes(ch)) this.water.push({ img, ch, v });
       }
     }
+    this.drawEdges(room);
+    this.buildDecor(room);
     for (const p of room.portals) {
       const cx = (p.x + p.w / 2) * T;
       const cy = (p.y + p.h / 2) * T;
@@ -167,6 +177,184 @@ export class WorldScene extends Phaser.Scene {
 
   feetY(y) {
     return (y + 0.5) * this.T + this.T * 0.35;
+  }
+
+  // ---------- scenery ----------
+
+  // Soften the tile grid: grass spilling onto paths, river banks and foam,
+  // bunds round the rice, then shadows under anything tall.
+  drawEdges(room) {
+    const { S, T } = this;
+    const { w, h } = roomSize(room);
+    const at = (x, y) => tileAt(room, x, y);
+    const put = (x, y, key) => this.mapLayer.add(this.add.image(x * T, y * T, key).setOrigin(0).setScale(S));
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const ch = at(x, y);
+        for (const [d, dx, dy] of SIDES) {
+          const n = at(x + dx, y + dy);
+          if ('.=D'.includes(ch) && GRASS.includes(n)) put(x, y, `fx_grass${(x + y) % 2}_${d}`);
+          if (WATER.includes(ch) && !WATER.includes(n) && n !== '#') put(x, y, d === 't' && n !== 'W' ? 'fx_bank_t' : `fx_foam_${d}`);
+          if (ch === 'r' && n !== 'r' && n !== '#') put(x, y, `fx_bund_${d}`);
+          if (ch === 's' && n === '~') put(x, y, `fx_deep_${d}`);
+        }
+        if (ch === 'G' && at(x, y + 1) !== 'G' && x % 3 === 1) put(x, y, 'fx_gdoor');
+      }
+    }
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (SHADOW_CASTERS.includes(at(x, y))) continue;
+        if (SHADOW_CASTERS.includes(at(x, y - 1))) put(x, y, 'fx_shade_t');
+        if (SHADOW_CASTERS.includes(at(x - 1, y))) put(x, y, 'fx_shade_l');
+      }
+    }
+  }
+
+  // room.decor: flat pieces join the ground layer, standing ones are
+  // depth-sorted with the entities so you can walk behind them.
+  buildDecor(room) {
+    const { S, T } = this;
+    this.decorViews?.forEach((d) => d.destroy());
+    this.decorViews = [];
+    this.fading = [];
+    for (const [kind, x, y, v = 0] of room.decor ?? []) {
+      const def = DECOR[kind];
+      const key = decorKey(kind, v);
+      if (DECOR_ART[kind].flat) {
+        this.mapLayer.add(this.add.image(x * T, y * T, key).setOrigin(0).setScale(S));
+        continue;
+      }
+      const ground = (y + 1) * T - 2 * S;
+      const img = this.add.image((x + (def.w ?? 1) / 2) * T, ground, key).setOrigin(0.5, 1).setScale(S).setDepth((y + 0.8) * T);
+      if (room.night) img.setTint(0xc8c0e0);
+      if (def.bob) this.tweens.add({ targets: img, y: ground + S, duration: 1000 + ((x * 137) % 500), yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      if (def.fade) this.fading.push(Object.assign(img, { box: img.getBounds() }));
+      this.decorViews.push(img);
+    }
+    this.buildWires(room);
+    if (room.night) this.buildNight(room);
+  }
+
+  // Where an overhead wire ties on: the top of a decor piece, a lantern post,
+  // or (for washing lines) a post of its own.
+  wireEnd(room, [x, y]) {
+    const { S, T } = this;
+    const d = room.decor?.find(([, dx, dy]) => dx === x && dy === y);
+    if (d) return { x: (x + (DECOR[d[0]].w ?? 1) / 2) * T, y: (y + 1) * T - 2 * S - DECOR_ART[d[0]].top * S };
+    if (tileAt(room, x, y) === 'l') return { x: (x + 0.5) * T, y: y * T + 7 * S };
+    return { x: (x + 0.5) * T, y: (y + 1) * T - 36 * S, post: (y + 1) * T - 4 * S };
+  }
+
+  buildWires(room) {
+    const { S } = this;
+    const g = this.add.graphics().setDepth(1e5);
+    this.decorViews.push(g);
+    const COLORS = [0xd94f4f, 0xffd23f, 0x3b82c4, 0x6dbf4a, 0xf07ab0, 0xfff3d6];
+    for (const wire of room.wires ?? []) {
+      const a = this.wireEnd(room, wire.from);
+      const b = this.wireEnd(room, wire.to);
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const sag = Math.max(6 * S, len * (wire.sag ?? 0.08));
+      const at = (t, more = 0, dy = 0) => ({ x: a.x + (b.x - a.x) * t, y: a.y + dy + (b.y - a.y) * t + (sag + more) * 4 * t * (1 - t) });
+      const line = (color, alpha, more = 0, dy = 0) => {
+        g.lineStyle(S, color, alpha);
+        g.beginPath();
+        for (let i = 0; i <= 24; i++) {
+          const p = at(i / 24, more, dy);
+          if (i) g.lineTo(p.x, p.y);
+          else g.moveTo(p.x, p.y);
+        }
+        g.strokePath();
+      };
+      const n = Math.max(2, Math.floor(len / (9 * S)));
+      const points = (from = 1, to = n - 1) => Array.from({ length: to - from + 1 }, (_, i) => [from + i, at((from + i) / n)]);
+      if (wire.kind === 'power') {
+        line(0x1f1a24, 0.95, 0, -2 * S);
+        line(0x1f1a24, 0.9, 4 * S, 0);
+        line(0x1f1a24, 0.85, 9 * S, 2 * S);
+        line(0x2a2a30, 0.8, 14 * S, 3 * S);
+      } else if (wire.kind === 'flags') {
+        line(0x6b4226, 1);
+        for (const [i, p] of points()) {
+          g.fillStyle(COLORS[i % COLORS.length], 1);
+          g.fillTriangle(p.x - 3 * S, p.y, p.x + 3 * S, p.y, p.x, p.y + 7 * S);
+        }
+      } else if (wire.kind === 'bulbs') {
+        line(0x1f1a24, 0.9);
+        for (const [i, p] of points()) {
+          const c = [0xffe066, 0xff6b8b, 0x6dff8a, 0x7cc7ff, 0xffb020][i % 5];
+          g.fillStyle(c, 1);
+          g.fillRect(p.x - S, p.y + S, 2 * S, 2 * S);
+          if (room.night) {
+            const glow = this.add.image(p.x, p.y + 2 * S, 'fx_glow').setScale((14 * S) / 64).setTint(c).setAlpha(0.7).setBlendMode(Phaser.BlendModes.ADD).setDepth(1e5 + 1);
+            this.decorViews.push(glow);
+          }
+        }
+      } else if (wire.kind === 'laundry') {
+        for (const e of [a, b]) {
+          g.fillStyle(0x4a2c18, 1);
+          g.fillRect(e.x - S, e.y, 2 * S, e.post - e.y);
+        }
+        line(0xe6e0d4, 1);
+        for (const [i, p] of points(1, n - 1)) {
+          if (i % 2) continue;
+          const c = COLORS[(i >> 1) % COLORS.length];
+          g.fillStyle(c, 1);
+          g.fillRect(p.x - 3 * S, p.y, 7 * S, 9 * S);
+          g.fillRect(p.x - 5 * S, p.y, 11 * S, 3 * S);
+          g.fillStyle(0x000000, 0.18);
+          g.fillRect(p.x + 2 * S, p.y + 3 * S, 2 * S, 6 * S);
+        }
+      }
+    }
+  }
+
+  // Night rooms: darken the ground, light the lanterns, sweep the stage lights.
+  buildNight(room) {
+    const { S, T } = this;
+    const { w, h } = roomSize(room);
+    this.decorViews.push(this.add.rectangle(0, 0, w * T, h * T, 0x140c2e, 0.42).setOrigin(0).setDepth(-0.5));
+    const light = (x, y, r, color, alpha) => {
+      const img = this.add.image(x, y, 'fx_glow').setScale((r * T * 2) / 64).setTint(color).setAlpha(alpha).setBlendMode(Phaser.BlendModes.ADD).setDepth(-0.4);
+      this.decorViews.push(img);
+      return img;
+    };
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const ch = tileAt(room, x, y);
+        const cx = (x + 0.5) * T;
+        if (ch === 'l') {
+          const img = light(cx, y * T + 8 * S, 2.6, 0xff9a50, 0.6);
+          this.tweens.add({ targets: img, alpha: 0.42, duration: 800 + ((x * 97 + y * 31) % 600), yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+        }
+        if (ch === 'F') light(cx, y * T + 3 * S, 1, 0xfff0a0, 0.35);
+        if (ch === 'J') light(cx, y * T + 6 * S, 1.5, 0xff7a40, 0.45);
+      }
+    }
+    if (room.stage) {
+      const { x1, y1, x2, y2 } = room.stage;
+      const my = ((y1 + y2 + 1) / 2) * T;
+      [[0xff6bd0, x1 + 1, x2], [0x6be0ff, x2, x1 + 1]].forEach(([color, from, to], i) => {
+        const spot = light((from + 0.5) * T, my + (i ? 1 : -1) * T, 2.2, color, 0.4);
+        this.tweens.add({ targets: spot, x: (to + 0.5) * T, duration: 2600 + i * 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      });
+    }
+  }
+
+  // Glints on the water pulse a few times a second.
+  flowWater() {
+    if (!this.fx || !this.room || !this.water?.length) return;
+    this.waterFrame = (this.waterFrame + 1) % WATER_FRAMES;
+    for (const w of this.water) w.img.setTexture(tileKey(w.ch, this.room.theme, w.v, this.waterFrame));
+  }
+
+  // Tall scenery (big trees, poles) turns see-through while you stand behind it.
+  fadeDecor(me) {
+    for (const img of this.fading ?? []) {
+      const behind = me && me.c.depth < img.depth && img.box.contains(me.c.x, me.c.y - 12 * this.S);
+      const target = behind ? 0.45 : 1;
+      if (img.alpha !== target) img.setAlpha(Math.abs(target - img.alpha) < 0.05 ? target : img.alpha + (target - img.alpha) * 0.2);
+    }
   }
 
   // ---------- entities ----------
@@ -709,6 +897,7 @@ export class WorldScene extends Phaser.Scene {
     }
     this.followCamera(dt);
     this.updatePortalMarks();
+    this.fadeDecor(me);
   }
 
   followCamera(dt, snap = false) {

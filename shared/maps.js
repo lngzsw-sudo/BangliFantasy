@@ -28,6 +28,36 @@ export const TILES = {
   'D': { name: 'stage' }, // เวทีงานวัด
 };
 
+// Scenery placed on top of the tiles: room.decor is a list of [kind, x, y, variant?].
+// `block` pieces stop players and monsters like a wall, `flat` ones lie on the
+// ground under everyone, the rest stand up and are depth-sorted with entities.
+// `w` is the footprint width in tiles (default 1). Sprites live in client/src/decor.js.
+export const DECOR = {
+  spirit: { name: 'ศาลพระภูมิ', block: true },
+  bodhi: { name: 'ต้นโพธิ์ผูกผ้าสามสี', block: true, fade: true },
+  lamp: { name: 'เสาไฟ', block: true },
+  pot: { name: 'กระถางต้นไม้', block: true },
+  fruit: { name: 'แผงผลไม้', block: true },
+  stools: { name: 'เก้าอี้พลาสติก' },
+  moto: { name: 'วินมอเตอร์ไซค์', block: true, w: 2 },
+  bin: { name: 'ถังขยะ', block: true },
+  pole: { name: 'เสาไฟฟ้า', block: true, fade: true },
+  jar: { name: 'โอ่งมังกร', block: true },
+  hay: { name: 'ลอมฟาง', block: true },
+  sign: { name: 'ป้ายไม้', block: true },
+  tires: { name: 'กองยางเก่า', block: true },
+  drums: { name: 'ถังน้ำมัน', block: true },
+  balloons: { name: 'ลูกโป่ง', block: true },
+  speaker: { name: 'ลำโพง', block: true },
+  boat: { name: 'เรือหางยาว', w: 2, bob: true }, // floats on water, which already blocks
+  puddle: { name: 'แอ่งน้ำ', flat: true },
+  lotus: { name: 'บัว', flat: true },
+  flowers: { name: 'ดอกไม้', flat: true },
+  ac: { name: 'แอร์', flat: true }, // hung on a wall tile
+  shutter: { name: 'ประตูเหล็กม้วน', flat: true }, // on a wall tile
+  manhole: { name: 'ฝาท่อ', flat: true },
+};
+
 export const ROOMS = {
   market: {
     id: 'market',
@@ -43,10 +73,10 @@ export const ROOMS = {
       '#.................NN...........#',
       '#..TT..........................#',
       '#..TT......,,,,,,,,,.......KK..#',
-      '#..........,.......,...........#',
-      '#..........,..ttt..,...........#',
-      'P..........,..ttt..,...........P',
-      'P..........,.......,...........P',
+      '#..........,,,,,,,,,...........#',
+      '#..........,,,,,,,,,...........#',
+      'P..........,,,,,,,,,...........P',
+      'P..........,,,,,,,,,...........P',
       '#..........,,,,,,,,,...........#',
       '#..BB....TT....................#',
       '#........TT....................#',
@@ -66,6 +96,19 @@ export const ROOMS = {
       { id: 'obj_cafe_table', kind: 'minigame', name: 'โต๊ะหน้าร้านกาแฟ (การ์ดจับคู่)', x: 3, y: 4, w: 2, h: 2 },
       { id: 'obj_bounty', kind: 'bounty', name: 'กระดานรับงานชุมชน', x: 18, y: 3, w: 2, h: 1 },
       { id: 'obj_checkers', kind: 'checkers', name: 'โต๊ะหมากฮอส', x: 9, y: 11, w: 2, h: 2 },
+    ],
+    decor: [
+      ['bodhi', 15, 7], ['spirit', 30, 3],
+      ['flowers', 12, 6], ['flowers', 18, 6, 1], ['flowers', 12, 10, 1], ['flowers', 18, 10],
+      ['lamp', 10, 4], ['lamp', 20, 4], ['lamp', 20, 11],
+      ['pot', 8, 2], ['pot', 15, 2, 1], ['pot', 27, 2],
+      ['fruit', 14, 12, 0], ['fruit', 16, 12, 1], ['fruit', 18, 12, 2], ['fruit', 26, 12, 3], ['fruit', 28, 12, 0],
+      ['stools', 2, 5], ['stools', 5, 5, 1], ['stools', 8, 12],
+      ['moto', 26, 9], ['moto', 23, 4], ['bin', 30, 12], ['pot', 1, 12, 1],
+    ],
+    // Overhead lines between two decor pieces (or lantern tiles), drawn above everyone.
+    wires: [
+      { kind: 'flags', from: [10, 4], to: [20, 4] },
     ],
     spawns: [],
   },
@@ -98,6 +141,19 @@ export const ROOMS = {
     ],
     npcs: [],
     objects: [],
+    decor: [
+      ['pole', 12, 4], ['pole', 27, 4], ['pole', 6, 9], ['pole', 31, 9],
+      ['ac', 2, 4], ['ac', 20, 1], ['ac', 19, 10], ['ac', 22, 9], ['ac', 35, 1, 1],
+      ['bin', 16, 1], ['bin', 36, 10], ['drums', 32, 2], ['tires', 27, 11],
+      ['puddle', 8, 6], ['puddle', 20, 6, 1], ['puddle', 28, 10], ['puddle', 14, 11, 1],
+      ['shutter', 14, 0, 1], ['shutter', 28, 0], ['shutter', 7, 2], ['shutter', 4, 4, 1], ['shutter', 19, 3], ['shutter', 22, 3, 1], ['shutter', 34, 3],
+      ['manhole', 17, 7], ['manhole', 30, 6], ['pot', 10, 2], ['pot', 31, 1, 1], ['pot', 5, 11],
+    ],
+    wires: [
+      { kind: 'power', from: [12, 4], to: [27, 4] },
+      { kind: 'power', from: [6, 9], to: [12, 4] },
+      { kind: 'power', from: [27, 4], to: [31, 9] },
+    ],
     spawns: [
       // Difficulty rises from the market entrance (west) to the far end (east).
       { type: 'rat', count: 7, area: { x1: 5, y1: 3, x2: 18, y2: 11 } },
@@ -136,6 +192,16 @@ export const ROOMS = {
     ],
     npcs: [],
     objects: [],
+    decor: [
+      ['boat', 2, 8], ['boat', 17, 8, 1], ['boat', 24, 11, 2],
+      ['lotus', 8, 9], ['lotus', 19, 7, 1], ['lotus', 30, 7], ['lotus', 3, 11, 1], ['lotus', 35, 9],
+      ['jar', 8, 3], ['jar', 25, 3], ['jar', 36, 3], ['jar', 3, 2],
+      ['flowers', 10, 12], ['flowers', 18, 13, 1], ['flowers', 29, 12], ['flowers', 5, 1, 1],
+    ],
+    wires: [
+      { kind: 'laundry', from: [9, 3], to: [12, 3] },
+      { kind: 'laundry', from: [27, 3], to: [31, 3] },
+    ],
     spawns: [
       { type: 'hyacinth', count: 8, area: { x1: 9, y1: 7, x2: 35, y2: 11 } },
       { type: 'monitor', count: 6, area: { x1: 2, y1: 12, x2: 34, y2: 13 } },
@@ -176,6 +242,17 @@ export const ROOMS = {
     ],
     npcs: [],
     objects: [],
+    decor: [
+      ['hay', 18, 2], ['hay', 24, 13], ['hay', 3, 16],
+      ['sign', 15, 9], ['tires', 41, 11], ['tires', 44, 16], ['drums', 38, 12],
+      ['pole', 5, 7], ['pole', 17, 7], ['pole', 29, 9],
+      ['flowers', 20, 1], ['flowers', 10, 16, 1], ['flowers', 27, 15], ['flowers', 22, 10, 1],
+      ['puddle', 35, 9], ['puddle', 40, 15, 1],
+    ],
+    wires: [
+      { kind: 'power', from: [5, 7], to: [17, 7] },
+      { kind: 'power', from: [17, 7], to: [29, 9] },
+    ],
     spawns: [
       { type: 'scarecrow', count: 8, area: { x1: 2, y1: 2, x2: 15, y2: 15 } },
       { type: 'wasp', count: 9, area: { x1: 17, y1: 1, x2: 29, y2: 16 } },
@@ -223,6 +300,20 @@ export const ROOMS = {
     ],
     // Players standing here take part in the dance-off.
     stage: { x1: 23, y1: 9, x2: 32, y2: 14 },
+    night: true, // dark sky, glowing lanterns
+    decor: [
+      ['speaker', 23, 9], ['speaker', 32, 9],
+      ['balloons', 20, 13], ['balloons', 3, 10, 1],
+      ['jar', 10, 2], ['jar', 23, 2],
+      ['flowers', 12, 7], ['flowers', 17, 8, 1], ['flowers', 2, 12], ['flowers', 3, 14, 1],
+    ],
+    wires: [
+      { kind: 'bulbs', from: [5, 9], to: [10, 5] },
+      { kind: 'bulbs', from: [10, 5], to: [23, 5] },
+      { kind: 'bulbs', from: [23, 5], to: [18, 10] },
+      { kind: 'bulbs', from: [18, 10], to: [10, 13] },
+      { kind: 'bulbs', from: [23, 9], to: [32, 9], sag: 0.02 },
+    ],
     spawns: [],
   },
 };
@@ -247,6 +338,10 @@ export function buildBlockedGrid(room) {
     grid.push(row);
   }
   for (const npc of room.npcs) grid[npc.y][npc.x] = true;
+  for (const [kind, x, y] of room.decor ?? []) {
+    const d = DECOR[kind];
+    if (d.block) for (let i = 0; i < (d.w ?? 1); i++) grid[y][x + i] = true;
+  }
   return grid;
 }
 
